@@ -26,3 +26,24 @@ def list_deadlines(include_done: bool = False) -> list[dict]:
     if not include_done:
         items = [d for d in items if not d["done"]]
     return sorted(items, key=lambda d: d["due"])
+
+def mark_done(deadline_id: int) -> dict | None:
+    """Mark a deadline as finished. Returns it, or None if the ID doesn't exist."""
+    data = storage.load()
+    for item in data["deadlines"]:
+        if item["id"] == deadline_id:
+            item["done"] = True
+            storage.save(data)
+            return item
+    return None
+
+
+def next_deadline() -> dict | None:
+    """Return the closest unfinished deadline, or None if there are none."""
+    items = list_deadlines()
+    return items[0] if items else None
+
+
+def days_left(item: dict) -> int:
+    """Days from today until the due date (negative means overdue)."""
+    return (date.fromisoformat(item["due"]) - date.today()).days

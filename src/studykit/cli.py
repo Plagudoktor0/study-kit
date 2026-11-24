@@ -45,6 +45,32 @@ def list_cmd(
         )
     console.print(table)
 
+@app.command()
+def done(deadline_id: int = typer.Argument(..., help="ID from 'studykit list'")):
+    """Mark a deadline as finished."""
+    item = deadlines.mark_done(deadline_id)
+    if item is None:
+        console.print(f"[red]No deadline with ID {deadline_id}.[/red]")
+        raise typer.Exit(code=1)
+    console.print(f"[green]Done:[/green] {item['title']}")
+
+
+@app.command("next")
+def next_cmd():
+    """Show the closest unfinished deadline."""
+    item = deadlines.next_deadline()
+    if item is None:
+        console.print("Nothing due. Enjoy the free time!")
+        return
+    days = deadlines.days_left(item)
+    if days < 0:
+        when = f"[red]overdue by {-days} day(s)[/red]"
+    elif days == 0:
+        when = "[yellow]due today[/yellow]"
+    else:
+        when = f"in {days} day(s)"
+    subject = item["subject"] or "no subject"
+    console.print(f"[bold]{item['title']}[/bold] ({subject}), due {item['due']}, {when}")
 
 if __name__ == "__main__":
     app()
