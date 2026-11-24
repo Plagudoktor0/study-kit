@@ -12,12 +12,16 @@ def data_path() -> Path:
 
 
 def load() -> dict:
-    """Read all data. If the file doesn't exist yet, return an empty structure."""
+    """Read all data. Missing parts are filled in, so old data files keep working."""
     path = data_path()
-    if not path.exists():
-        return {"deadlines": [], "exams": []}
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    if path.exists():
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    else:
+        data = {}
+    for key in ("deadlines", "exams", "subjects"):
+        data.setdefault(key, [])
+    return data
 
 
 def save(data: dict) -> None:

@@ -2,7 +2,7 @@ import tkinter as tk
 from datetime import date, datetime
 from tkinter import messagebox, ttk
 
-from studykit import deadlines
+from studykit import deadlines, subjects
 
 
 class AddDialog(tk.Toplevel):
@@ -25,7 +25,9 @@ class AddDialog(tk.Toplevel):
 
         ttk.Label(self, text="Subject").grid(row=1, column=0, sticky="w", **pad)
         self.subject_var = tk.StringVar()
-        ttk.Entry(self, textvariable=self.subject_var, width=30).grid(row=1, column=1, **pad)
+        ttk.Combobox(
+            self, textvariable=self.subject_var, values=subjects.list_subjects(), width=27
+        ).grid(row=1, column=1, **pad)
 
         ttk.Label(self, text="Due (YYYY-MM-DD)").grid(row=2, column=0, sticky="w", **pad)
         self.due_var = tk.StringVar(value=date.today().isoformat())
@@ -52,7 +54,10 @@ class AddDialog(tk.Toplevel):
                 "Wrong date", "Use the format YYYY-MM-DD, e.g. 2026-12-01.", parent=self
             )
             return
-        deadlines.add_deadline(title, self.subject_var.get().strip(), due)
+                
+        subject = self.subject_var.get().strip()
+        deadlines.add_deadline(title, subject, due)
+        subjects.add_subject(subject)
         self.on_saved()
         self.destroy()
 
