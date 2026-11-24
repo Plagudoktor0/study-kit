@@ -11,9 +11,9 @@ from studykit import autostart, deadlines, subjects
 class DatePicker(ttk.Frame):
     """A read-only date field with a button that opens a calendar popup."""
 
-    def __init__(self, parent):
+    def __init__(self, parent, initial=None):
         super().__init__(parent)
-        self.date = date.today()
+        self.date = initial or date.today()
         self.text = tk.StringVar(value=self.date.isoformat())
         ttk.Entry(self, textvariable=self.text, width=22, state="readonly").pack(side="left")
         ttk.Button(self, text="Pick...", width=7, command=self.open_popup).pack(
@@ -51,12 +51,13 @@ class DatePicker(ttk.Frame):
 
 
 class AddDialog(tk.Toplevel):
-    """Small form for adding a deadline."""
+    """Form for adding a deadline, or for editing one when `item` is given."""
 
-    def __init__(self, parent, on_saved):
+    def __init__(self, parent, on_saved, item=None):
         super().__init__(parent)
         self.on_saved = on_saved
-        self.title("Add deadline")
+        self.item = item
+        self.title("Edit deadline" if item else "Add deadline")
         self.resizable(False, False)
         self.transient(parent)
         # open near the top-left corner of the main window
@@ -65,18 +66,19 @@ class AddDialog(tk.Toplevel):
         pad = {"padx": 10, "pady": 5}
 
         ttk.Label(self, text="Title").grid(row=0, column=0, sticky="w", **pad)
-        self.title_var = tk.StringVar()
+        self.title_var = tk.StringVar(value=item["title"] if item else "")
         title_entry = ttk.Entry(self, textvariable=self.title_var, width=30)
         title_entry.grid(row=0, column=1, **pad)
 
         ttk.Label(self, text="Subject").grid(row=1, column=0, sticky="w", **pad)
-        self.subject_var = tk.StringVar()
+        self.subject_var = tk.StringVar(value=item["subject"] if item else "")
         ttk.Combobox(
             self, textvariable=self.subject_var, values=subjects.list_subjects(), width=27
         ).grid(row=1, column=1, **pad)
 
         ttk.Label(self, text="Due date").grid(row=2, column=0, sticky="w", **pad)
-        self.due_picker = DatePicker(self)
+        initial = date.fromisoformat(item["due"]) if item else None
+        self.due_picker = DatePicker(self, initial)
         self.due_picker.grid(row=2, column=1, sticky="w", **pad)
 
         buttons = ttk.Frame(self)
@@ -93,7 +95,10 @@ class AddDialog(tk.Toplevel):
             messagebox.showerror("Missing title", "Please enter a title.", parent=self)
             return
         subject = self.subject_var.get().strip()
-        deadlines.add_deadline(title, subject, self.due_picker.date)
+        if self.item:
+            deadlines.update_deadline(self.item["id"], title, subject, self.due_picker.date)
+        else:
+            deadlines.add_deadline(title, subject, self.due_picker.date)
         subjects.add_subject(subject)
         self.on_saved()
         self.destroy()
@@ -123,6 +128,7 @@ class App(tk.Tk):
         self.tree.tag_configure("soon", foreground="#d68910")
         self.tree.tag_configure("finished", foreground="#7f8c8d")
         self.tree.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+        self.tree.bind("<Double-1>", self.open_edit)
 
         self.show_archive = tk.BooleanVar(value=False)
 
@@ -148,6 +154,16 @@ class App(tk.Tk):
 
     def open_add(self):
         AddDialog(self, on_saved=self.refresh)
+
+    def open_edit(self, event):
+        row = self.tree.identify_row(event.y)
+        if not row:
+            return  # double-click on the header or on empty space
+        deadline_id = int(self.tree.item(row, "values")[0])
+        for item in deadlines.list_deadlines(include_done=True):
+            if item["id"] == deadline_id:
+                AddDialog(self, on_saved=self.refresh, item=item)
+                return   
 
     def toggle_autostart(self):
         wanted = self.autostart_var.get()

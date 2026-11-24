@@ -89,4 +89,23 @@ def test_restore_moves_item_back_to_active_list():
 
 
 def test_restore_unknown_id_returns_none():
-    assert deadlines.restore_deadline(99) is None    
+    assert deadlines.restore_deadline(99) is None  
+
+def test_update_changes_fields():
+    deadlines.add_deadline("A", "OS", date(2026, 12, 1))
+    item = deadlines.update_deadline(1, "B", "Calculus", date(2026, 12, 5))
+    assert item["title"] == "B"
+    stored = deadlines.list_deadlines()[0]
+    assert stored["subject"] == "Calculus"
+    assert stored["due"] == "2026-12-05"
+
+
+def test_update_keeps_done_status():
+    deadlines.add_deadline("A", "", date(2026, 12, 1))
+    deadlines.mark_done(1)
+    deadlines.update_deadline(1, "A2", "", date(2026, 12, 2))
+    assert deadlines.list_finished()[0]["title"] == "A2"
+
+
+def test_update_unknown_id_returns_none():
+    assert deadlines.update_deadline(99, "x", "", date(2026, 12, 1)) is None      

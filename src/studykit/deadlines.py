@@ -73,3 +73,15 @@ def restore_deadline(deadline_id: int) -> dict | None:
             storage.save(data)
             return item
     return None    
+
+def update_deadline(deadline_id: int, title: str, subject: str, due: date) -> dict | None:
+    """Change title, subject and due date. Returns None if the ID doesn't exist."""
+    data = storage.load()
+    for item in data["deadlines"]:
+        if item["id"] == deadline_id:
+            item["title"] = title
+            item["subject"] = subject
+            item["due"] = due.isoformat()
+            storage.save(data)
+            return item
+    return None
