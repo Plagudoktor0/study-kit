@@ -1,8 +1,53 @@
 import tkinter as tk
-from datetime import date, datetime
+from datetime import date
 from tkinter import messagebox, ttk
 
+from tkcalendar import Calendar
+
 from studykit import deadlines, subjects
+
+
+
+class DatePicker(ttk.Frame):
+    """A read-only date field with a button that opens a calendar popup."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.date = date.today()
+        self.text = tk.StringVar(value=self.date.isoformat())
+        ttk.Entry(self, textvariable=self.text, width=22, state="readonly").pack(side="left")
+        ttk.Button(self, text="Pick...", width=7, command=self.open_popup).pack(
+            side="left", padx=(5, 0)
+        )
+
+    def open_popup(self):
+        top = tk.Toplevel(self)
+        top.title("Pick a date")
+        top.resizable(False, False)
+        top.transient(self.winfo_toplevel())
+        top.geometry(f"+{self.winfo_rootx()}+{self.winfo_rooty() + self.winfo_height()}")
+
+        cal = Calendar(
+            top,
+            selectmode="day",
+            date_pattern="yyyy-mm-dd",
+            firstweekday="monday",
+            showweeknumbers=False,
+            showothermonthdays=False,
+            year=self.date.year,
+            month=self.date.month,
+            day=self.date.day,
+        )
+        cal.pack(padx=10, pady=10)
+
+        def choose():
+            chosen = cal.selection_get()
+            if chosen is not None:
+                self.date = chosen
+                self.text.set(chosen.isoformat())
+            top.destroy()
+
+        ttk.Button(top, text="OK", command=choose).pack(pady=(0, 10))
 
 
 class AddDialog(tk.Toplevel):
@@ -14,7 +59,8 @@ class AddDialog(tk.Toplevel):
         self.title("Add deadline")
         self.resizable(False, False)
         self.transient(parent)
-        self.grab_set()  # blocks the main window until this one is closed
+        # open near the top-left corner of the main window
+        self.geometry(f"+{parent.winfo_x() + 20}+{parent.winfo_y() + 20}")
 
         pad = {"padx": 10, "pady": 5}
 
@@ -29,9 +75,9 @@ class AddDialog(tk.Toplevel):
             self, textvariable=self.subject_var, values=subjects.list_subjects(), width=27
         ).grid(row=1, column=1, **pad)
 
-        ttk.Label(self, text="Due (YYYY-MM-DD)").grid(row=2, column=0, sticky="w", **pad)
-        self.due_var = tk.StringVar(value=date.today().isoformat())
-        ttk.Entry(self, textvariable=self.due_var, width=30).grid(row=2, column=1, **pad)
+        ttk.Label(self, text="Due date").grid(row=2, column=0, sticky="w", **pad)
+        self.due_picker = DatePicker(self)
+        self.due_picker.grid(row=2, column=1, sticky="w", **pad)
 
         buttons = ttk.Frame(self)
         buttons.grid(row=3, column=0, columnspan=2, pady=10)
@@ -39,7 +85,6 @@ class AddDialog(tk.Toplevel):
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         title_entry.focus()
-        self.bind("<Return>", lambda event: self.save())
         self.bind("<Escape>", lambda event: self.destroy())
 
     def save(self):
@@ -47,19 +92,12 @@ class AddDialog(tk.Toplevel):
         if not title:
             messagebox.showerror("Missing title", "Please enter a title.", parent=self)
             return
-        try:
-            due = datetime.strptime(self.due_var.get().strip(), "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showerror(
-                "Wrong date", "Use the format YYYY-MM-DD, e.g. 2026-12-01.", parent=self
-            )
-            return
-                
         subject = self.subject_var.get().strip()
-        deadlines.add_deadline(title, subject, due)
+        deadlines.add_deadline(title, subject, self.due_picker.date)
         subjects.add_subject(subject)
         self.on_saved()
         self.destroy()
+
 
 
 class App(tk.Tk):
