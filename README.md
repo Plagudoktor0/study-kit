@@ -15,6 +15,8 @@ A small Windows app for tracking study deadlines. It opens as a simple window, s
 - Colors show urgency: red when overdue, orange when due within 3 days
 - Mark deadlines as done, then view them in the archive or restore them
 - "Start with Windows" checkbox to open the app at login
+- Edit any deadline by double-clicking it
+- Daily Windows pop-up reminder for deadlines that are overdue, due today, or due tomorrow (can be turned off)
 - Command-line tool too: `studykit add`, `list`, `done`, `next`
 
 ## Download (Windows)
@@ -60,13 +62,13 @@ pytest
 
 ```
 pip install pyinstaller
-pyinstaller --onefile --windowed --name study-kit --paths src --hidden-import babel.numbers launcher.py
+pyinstaller --onefile --windowed --name study-kit --paths src --hidden-import babel.numbers --hidden-import winotify launcher.py
 ```
 
 ## Roadmap
 
-- [ ] Edit a deadline by double-clicking it
-- [ ] Windows notifications for deadlines due tomorrow
+- [x] Edit a deadline by double-clicking it
+- [x] Windows notifications for deadlines due tomorrow
 - [ ] Exam planner
 - [ ] PDF toolkit (merge, split)
 - [ ] Dark mode
