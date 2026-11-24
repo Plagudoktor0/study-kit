@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "studykit"
+version = "0.1.0"
+description = "Small command-line tools for students: deadlines, exam planner, PDF toolkit"
+requires-python = ">=3.10"
+dependencies = ["typer", "rich", "pypdf"]
+
+[project.scripts]
+studykit = "studykit.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
