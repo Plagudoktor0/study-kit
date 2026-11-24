@@ -57,3 +57,19 @@ def delete_deadline(deadline_id: int) -> bool:
     data["deadlines"] = remaining
     storage.save(data)
     return True    
+
+def list_finished() -> list[dict]:
+    """Return finished deadlines, newest due date first."""
+    items = [d for d in storage.load()["deadlines"] if d["done"]]
+    return sorted(items, key=lambda d: d["due"], reverse=True)
+
+
+def restore_deadline(deadline_id: int) -> dict | None:
+    """Move a finished deadline back to the active list."""
+    data = storage.load()
+    for item in data["deadlines"]:
+        if item["id"] == deadline_id:
+            item["done"] = False
+            storage.save(data)
+            return item
+    return None    

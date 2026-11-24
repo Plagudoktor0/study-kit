@@ -70,3 +70,23 @@ def test_delete_removes_only_that_deadline():
 
 def test_delete_unknown_id_returns_false():
     assert deadlines.delete_deadline(99) is False   
+
+def test_list_finished_only_returns_done_items():
+    deadlines.add_deadline("A", "", date(2026, 12, 1))
+    deadlines.add_deadline("B", "", date(2026, 12, 2))
+    deadlines.mark_done(1)
+    titles = [d["title"] for d in deadlines.list_finished()]
+    assert titles == ["A"]
+
+
+def test_restore_moves_item_back_to_active_list():
+    deadlines.add_deadline("A", "", date(2026, 12, 1))
+    deadlines.mark_done(1)
+    assert deadlines.list_deadlines() == []
+    deadlines.restore_deadline(1)
+    assert [d["title"] for d in deadlines.list_deadlines()] == ["A"]
+    assert deadlines.list_finished() == []
+
+
+def test_restore_unknown_id_returns_none():
+    assert deadlines.restore_deadline(99) is None    

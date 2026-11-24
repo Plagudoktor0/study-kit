@@ -101,7 +101,7 @@ class AddDialog(tk.Toplevel):
 
 
 class App(tk.Tk):
-    """Main window: the list of unfinished deadlines."""
+    """Main window: active deadlines, or the archive of finished ones."""
 
     def __init__(self):
         super().__init__()
@@ -121,13 +121,20 @@ class App(tk.Tk):
             self.tree.column(name, width=width, anchor="w")
         self.tree.tag_configure("overdue", foreground="#c0392b")
         self.tree.tag_configure("soon", foreground="#d68910")
+        self.tree.tag_configure("finished", foreground="#7f8c8d")
         self.tree.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+
+        self.show_archive = tk.BooleanVar(value=False)
 
         bar = ttk.Frame(self)
         bar.pack(fill="x", padx=10, pady=10)
         ttk.Button(bar, text="Add deadline", command=self.open_add).pack(side="left")
         ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
-        ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left")
+        ttk.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
+        ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left", padx=5)
+        ttk.Checkbutton(
+            bar, text="Show archive", variable=self.show_archive, command=self.refresh
+        ).pack(side="right")
 
         self.refresh()
 
@@ -149,17 +156,37 @@ class App(tk.Tk):
         deadlines.mark_done(deadline_id)
         self.refresh()
 
+    def restore_selected(self):
+        deadline_id = self.selected_id()
+        if deadline_id is None:
+            return
+        deadlines.restore_deadline(deadline_id)
+        self.refresh()
+
     def delete_selected(self):
         deadline_id = self.selected_id()
         if deadline_id is None:
             return
         if messagebox.askyesno("Delete", "Delete this deadline permanently?"):
             deadlines.delete_deadline(deadline_id)
-            self.refresh()    
+            self.refresh()
 
     def refresh(self):
         for row in self.tree.get_children():
             self.tree.delete(row)
+
+        if self.show_archive.get():
+            self.title("study-kit - archive")
+            for item in deadlines.list_finished():
+                self.tree.insert(
+                    "",
+                    "end",
+                    values=(item["id"], item["due"], "finished", item["subject"], item["title"]),
+                    tags=("finished",),
+                )
+            return
+
+        self.title("study-kit")
         for item in deadlines.list_deadlines():
             days = deadlines.days_left(item)
             if days < 0:
