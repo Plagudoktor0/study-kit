@@ -47,3 +47,13 @@ def next_deadline() -> dict | None:
 def days_left(item: dict) -> int:
     """Days from today until the due date (negative means overdue)."""
     return (date.fromisoformat(item["due"]) - date.today()).days
+
+def delete_deadline(deadline_id: int) -> bool:
+    """Remove a deadline completely. Returns False if the ID doesn't exist."""
+    data = storage.load()
+    remaining = [d for d in data["deadlines"] if d["id"] != deadline_id]
+    if len(remaining) == len(data["deadlines"]):
+        return False
+    data["deadlines"] = remaining
+    storage.save(data)
+    return True    

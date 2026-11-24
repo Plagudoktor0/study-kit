@@ -59,3 +59,14 @@ def test_days_left():
     two_days_ago = {"due": (date.today() - timedelta(days=2)).isoformat()}
     assert deadlines.days_left(in_five_days) == 5
     assert deadlines.days_left(two_days_ago) == -2
+
+def test_delete_removes_only_that_deadline():
+    deadlines.add_deadline("A", "", date(2026, 12, 1))
+    deadlines.add_deadline("B", "", date(2026, 12, 2))
+    assert deadlines.delete_deadline(1) is True
+    titles = [d["title"] for d in deadlines.list_deadlines(include_done=True)]
+    assert titles == ["B"]
+
+
+def test_delete_unknown_id_returns_false():
+    assert deadlines.delete_deadline(99) is False   

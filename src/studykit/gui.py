@@ -83,11 +83,36 @@ class App(tk.Tk):
         bar = ttk.Frame(self)
         bar.pack(fill="x", padx=10, pady=10)
         ttk.Button(bar, text="Add deadline", command=self.open_add).pack(side="left")
+        ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
+        ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left")
 
         self.refresh()
 
     def open_add(self):
         AddDialog(self, on_saved=self.refresh)
+
+    def selected_id(self):
+        """ID of the highlighted row, or None (with a hint) if nothing is selected."""
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo("Nothing selected", "Click a row first.")
+            return None
+        return int(self.tree.item(selection[0], "values")[0])
+
+    def mark_selected_done(self):
+        deadline_id = self.selected_id()
+        if deadline_id is None:
+            return
+        deadlines.mark_done(deadline_id)
+        self.refresh()
+
+    def delete_selected(self):
+        deadline_id = self.selected_id()
+        if deadline_id is None:
+            return
+        if messagebox.askyesno("Delete", "Delete this deadline permanently?"):
+            deadlines.delete_deadline(deadline_id)
+            self.refresh()    
 
     def refresh(self):
         for row in self.tree.get_children():
