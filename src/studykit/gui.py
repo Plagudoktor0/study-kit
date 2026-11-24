@@ -4,7 +4,7 @@ from tkinter import messagebox, ttk
 
 from tkcalendar import Calendar
 
-from studykit import deadlines, subjects
+from studykit import autostart, deadlines, subjects
 
 
 
@@ -135,11 +135,30 @@ class App(tk.Tk):
         ttk.Checkbutton(
             bar, text="Show archive", variable=self.show_archive, command=self.refresh
         ).pack(side="right")
+        if autostart.supported():
+            self.autostart_var = tk.BooleanVar(value=autostart.is_enabled())
+            ttk.Checkbutton(
+                bar,
+                text="Start with Windows",
+                variable=self.autostart_var,
+                command=self.toggle_autostart,
+            ).pack(side="right", padx=10)
 
         self.refresh()
 
     def open_add(self):
         AddDialog(self, on_saved=self.refresh)
+
+    def toggle_autostart(self):
+        wanted = self.autostart_var.get()
+        try:
+            if wanted:
+                autostart.enable()
+            else:
+                autostart.disable()
+        except OSError as error:
+            self.autostart_var.set(not wanted)  # put the checkbox back
+            messagebox.showerror("Auto-start", f"Could not change the setting:\n{error}")
 
     def selected_id(self):
         """ID of the highlighted row, or None (with a hint) if nothing is selected."""
