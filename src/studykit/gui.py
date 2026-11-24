@@ -4,7 +4,7 @@ from tkinter import messagebox, ttk
 
 from tkcalendar import Calendar
 
-from studykit import autostart, deadlines, subjects
+from studykit import autostart, deadlines, notifier, reminders, subjects
 
 
 
@@ -111,7 +111,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("study-kit")
-        self.geometry("620x360")
+        self.geometry("760x360")
 
         columns = ("id", "due", "left", "subject", "title")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", selectmode="browse")
@@ -149,8 +149,13 @@ class App(tk.Tk):
                 variable=self.autostart_var,
                 command=self.toggle_autostart,
             ).pack(side="right", padx=10)
+        self.notify_var = tk.BooleanVar(value=reminders.is_enabled())
+        ttk.Checkbutton(
+            bar, text="Notify", variable=self.notify_var, command=self.toggle_notify
+        ).pack(side="right")
 
         self.refresh()
+        self.after(2000, self.check_reminders)  # first reminder check shortly after start
 
     def open_add(self):
         AddDialog(self, on_saved=self.refresh)
@@ -163,7 +168,14 @@ class App(tk.Tk):
         for item in deadlines.list_deadlines(include_done=True):
             if item["id"] == deadline_id:
                 AddDialog(self, on_saved=self.refresh, item=item)
-                return   
+                return
+
+    def toggle_notify(self):
+        reminders.set_enabled(self.notify_var.get())
+
+    def check_reminders(self):
+        reminders.check_and_notify(notifier.send)
+        self.after(3_600_000, self.check_reminders)  # check again in one hour
 
     def toggle_autostart(self):
         wanted = self.autostart_var.get()

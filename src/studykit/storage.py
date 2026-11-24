@@ -21,6 +21,7 @@ def load() -> dict:
         data = {}
     for key in ("deadlines", "exams", "subjects"):
         data.setdefault(key, [])
+    data.setdefault("settings", {})
     return data
 
 

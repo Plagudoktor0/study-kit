@@ -7,7 +7,7 @@ name = "studykit"
 version = "0.1.0"
 description = "Small command-line tools for students: deadlines, exam planner, PDF toolkit"
 requires-python = ">=3.10"
-dependencies = ["typer", "rich", "pypdf","tkcalendar"]
+dependencies = ["typer", "rich", "pypdf","tkcalendar", "winotify; sys_platform == 'win32'"]
 
 [project.scripts]
 studykit = "studykit.cli:app"
