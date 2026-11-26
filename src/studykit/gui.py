@@ -4,8 +4,7 @@ from tkinter import messagebox, ttk
 
 from tkcalendar import Calendar
 
-from studykit import autostart, deadlines, exams, notifier, reminders, subjects
-
+from studykit import autostart, deadlines, exams, notifier, reminders, subjects, theme
 
 
 class DatePicker(ttk.Frame):
@@ -27,6 +26,7 @@ class DatePicker(ttk.Frame):
         top.transient(self.winfo_toplevel())
         top.geometry(f"+{self.winfo_rootx()}+{self.winfo_rooty() + self.winfo_height()}")
 
+        p = theme.palette()
         cal = Calendar(
             top,
             selectmode="day",
@@ -37,6 +37,17 @@ class DatePicker(ttk.Frame):
             year=self.date.year,
             month=self.date.month,
             day=self.date.day,
+            background=p["button"],
+            foreground=p["fg"],
+            headersbackground=p["button"],
+            headersforeground=p["fg"],
+            normalbackground=p["field"],
+            normalforeground=p["fg"],
+            weekendbackground=p["field"],
+            weekendforeground=p["fg"],
+            selectbackground=p["select"],
+            selectforeground=p["select_fg"],
+            bordercolor=p["border"],
         )
         cal.pack(padx=10, pady=10)
 
@@ -167,6 +178,9 @@ class App(tk.Tk):
         self.title("study-kit")
         self.geometry("760x420")
 
+        self.theme_mode = theme.get_mode()
+        self.theme_name = theme.apply(self, self.theme_mode)
+
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
         self.deadlines_tab = ttk.Frame(self.notebook)
@@ -176,10 +190,59 @@ class App(tk.Tk):
 
         self.build_deadlines_tab()
         self.build_exams_tab()
+        self.build_footer()
+        self.apply_theme_colors()
 
         self.refresh()
         self.refresh_exams()
         self.after(2000, self.check_reminders)  # first reminder check shortly after start
+        self.after(5000, self.poll_theme)  # follow the Windows theme
+
+    def build_footer(self):
+        footer = ttk.Frame(self)
+        footer.pack(fill="x", padx=10, pady=(0, 8))
+        self.theme_var = tk.StringVar(value=self.theme_mode.capitalize())
+        box = ttk.Combobox(
+            footer,
+            textvariable=self.theme_var,
+            values=["System", "Light", "Dark"],
+            state="readonly",
+            width=8,
+        )
+        box.pack(side="right")
+        ttk.Label(footer, text="Theme:").pack(side="right", padx=(0, 5))
+        box.bind("<<ComboboxSelected>>", self.change_theme)
+
+    def change_theme(self, event=None):
+        self.theme_mode = self.theme_var.get().lower()
+        theme.set_mode(self.theme_mode)
+        self.reapply_theme()
+
+    def reapply_theme(self):
+        self.theme_name = theme.apply(self, self.theme_mode)
+        self.apply_theme_colors()
+
+    def apply_theme_colors(self):
+        """Colors that ttk styles can't set: table row tags and the plan text box."""
+        p = theme.palette()
+        for tree in (self.tree, self.exam_tree):
+            tree.tag_configure("overdue", foreground=p["overdue"])
+            tree.tag_configure("soon", foreground=p["soon"])
+            tree.tag_configure("finished", foreground=p["finished"])
+        self.plan_text.configure(
+            bg=p["field"],
+            fg=p["fg"],
+            insertbackground=p["fg"],
+            selectbackground=p["select"],
+            selectforeground=p["select_fg"],
+        )
+
+    def poll_theme(self):
+        """In System mode, check the Windows setting again every few seconds."""
+        if self.theme_mode == "system":
+            if theme.resolve_name("system", theme.system_is_dark()) != self.theme_name:
+                self.reapply_theme()
+        self.after(5000, self.poll_theme)
 
     # ---------- Deadlines tab ----------
 
