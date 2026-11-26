@@ -8,6 +8,8 @@ A small Windows app for tracking study deadlines. It opens as a simple window, s
 
 ![Calendar](docs/screenshot-3.jpg)
 
+[NOT UPDATED YET]
+
 ## Features
 
 - Add deadlines with a title, a subject, and a calendar date picker
