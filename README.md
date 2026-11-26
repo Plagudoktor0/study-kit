@@ -17,6 +17,8 @@ A small Windows app for tracking study deadlines. It opens as a simple window, s
 - "Start with Windows" checkbox to open the app at login
 - Edit any deadline by double-clicking it
 - Daily Windows pop-up reminder for deadlines that are overdue, due today, or due tomorrow (can be turned off)
+- New design, sharper resolution
+- Exam planner
 - Command-line tool too: `studykit add`, `list`, `done`, `next`
 
 ## Download (Windows)
@@ -69,9 +71,9 @@ pyinstaller --onefile --windowed --name study-kit --paths src --hidden-import ba
 
 - [x] Edit a deadline by double-clicking it
 - [x] Windows notifications for deadlines due tomorrow
-- [ ] Exam planner
+- [x] Exam planner
 - [ ] PDF toolkit (merge, split)
-- [ ] Dark mode
+- [x] Dark mode
 
 ## License
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "studykit"
-version = "0.2.0"
+version = "0.3.0"
 description = "Small command-line tools for students: deadlines, exam planner, PDF toolkit"
 requires-python = ">=3.10"
 dependencies = ["typer", "rich", "pypdf","tkcalendar", "winotify; sys_platform == 'win32'"]
