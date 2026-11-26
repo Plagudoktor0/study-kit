@@ -4,7 +4,7 @@ from tkinter import messagebox, ttk
 
 from tkcalendar import Calendar
 
-from studykit import autostart, deadlines, notifier, reminders, subjects
+from studykit import autostart, deadlines, exams, notifier, reminders, subjects
 
 
 
@@ -105,16 +105,89 @@ class AddDialog(tk.Toplevel):
 
 
 
+class ExamDialog(tk.Toplevel):
+    """Form for adding an exam with its list of topics."""
+
+    def __init__(self, parent, on_saved):
+        super().__init__(parent)
+        self.on_saved = on_saved
+        self.title("Add exam")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.geometry(f"+{parent.winfo_x() + 20}+{parent.winfo_y() + 20}")
+
+        pad = {"padx": 10, "pady": 5}
+
+        ttk.Label(self, text="Subject").grid(row=0, column=0, sticky="w", **pad)
+        self.subject_var = tk.StringVar()
+        subject_box = ttk.Combobox(
+            self, textvariable=self.subject_var, values=subjects.list_subjects(), width=27
+        )
+        subject_box.grid(row=0, column=1, **pad)
+
+        ttk.Label(self, text="Exam date").grid(row=1, column=0, sticky="w", **pad)
+        self.date_picker = DatePicker(self)
+        self.date_picker.grid(row=1, column=1, sticky="w", **pad)
+
+        ttk.Label(self, text="Topics").grid(row=2, column=0, sticky="nw", **pad)
+        self.topics_text = tk.Text(self, width=30, height=7, wrap="word")
+        self.topics_text.grid(row=2, column=1, **pad)
+        ttk.Label(self, text="One topic per line, or separated by commas").grid(
+            row=3, column=1, sticky="w", padx=10
+        )
+
+        buttons = ttk.Frame(self)
+        buttons.grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(buttons, text="Save", command=self.save).pack(side="left", padx=5)
+        ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
+
+        subject_box.focus()
+        self.bind("<Escape>", lambda event: self.destroy())
+
+    def save(self):
+        subject = self.subject_var.get().strip()
+        if not subject:
+            messagebox.showerror("Missing subject", "Please enter a subject.", parent=self)
+            return
+        topics = exams.parse_topics(self.topics_text.get("1.0", "end"))
+        if not topics:
+            messagebox.showerror("No topics", "Add at least one topic.", parent=self)
+            return
+        exams.add_exam(subject, self.date_picker.date, topics)
+        subjects.add_subject(subject)
+        self.on_saved()
+        self.destroy()
+
+
 class App(tk.Tk):
-    """Main window: active deadlines, or the archive of finished ones."""
+    """Main window with two tabs: Deadlines and Exams."""
 
     def __init__(self):
         super().__init__()
         self.title("study-kit")
-        self.geometry("760x360")
+        self.geometry("760x420")
 
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill="both", expand=True)
+        self.deadlines_tab = ttk.Frame(self.notebook)
+        self.exams_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.deadlines_tab, text="Deadlines")
+        self.notebook.add(self.exams_tab, text="Exams")
+
+        self.build_deadlines_tab()
+        self.build_exams_tab()
+
+        self.refresh()
+        self.refresh_exams()
+        self.after(2000, self.check_reminders)  # first reminder check shortly after start
+
+    # ---------- Deadlines tab ----------
+
+    def build_deadlines_tab(self):
         columns = ("id", "due", "left", "subject", "title")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", selectmode="browse")
+        self.tree = ttk.Treeview(
+            self.deadlines_tab, columns=columns, show="headings", selectmode="browse"
+        )
         for name, text, width in [
             ("id", "ID", 40),
             ("due", "Due", 90),
@@ -132,7 +205,7 @@ class App(tk.Tk):
 
         self.show_archive = tk.BooleanVar(value=False)
 
-        bar = ttk.Frame(self)
+        bar = ttk.Frame(self.deadlines_tab)
         bar.pack(fill="x", padx=10, pady=10)
         ttk.Button(bar, text="Add deadline", command=self.open_add).pack(side="left")
         ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
@@ -153,9 +226,6 @@ class App(tk.Tk):
         ttk.Checkbutton(
             bar, text="Notify", variable=self.notify_var, command=self.toggle_notify
         ).pack(side="right")
-
-        self.refresh()
-        self.after(2000, self.check_reminders)  # first reminder check shortly after start
 
     def open_add(self):
         AddDialog(self, on_saved=self.refresh)
@@ -250,6 +320,107 @@ class App(tk.Tk):
                 values=(item["id"], item["due"], left, item["subject"], item["title"]),
                 tags=tags,
             )
+
+    # ---------- Exams tab ----------
+
+    def build_exams_tab(self):
+        top = ttk.Frame(self.exams_tab)
+        top.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+
+        columns = ("id", "date", "left", "subject", "topics")
+        self.exam_tree = ttk.Treeview(
+            top, columns=columns, show="headings", selectmode="browse", height=6
+        )
+        for name, text, width in [
+            ("id", "ID", 40),
+            ("date", "Exam date", 100),
+            ("left", "Left", 90),
+            ("subject", "Subject", 200),
+            ("topics", "Topics", 80),
+        ]:
+            self.exam_tree.heading(name, text=text)
+            self.exam_tree.column(name, width=width, anchor="w")
+        self.exam_tree.tag_configure("soon", foreground="#d68910")
+        self.exam_tree.tag_configure("finished", foreground="#7f8c8d")
+        self.exam_tree.pack(fill="x")
+        self.exam_tree.bind("<<TreeviewSelect>>", self.show_plan)
+
+        ttk.Label(top, text="Study plan").pack(anchor="w", pady=(10, 2))
+        self.plan_text = tk.Text(top, height=8, state="disabled", wrap="word")
+        self.plan_text.pack(fill="both", expand=True)
+
+        bar = ttk.Frame(self.exams_tab)
+        bar.pack(fill="x", padx=10, pady=10)
+        ttk.Button(bar, text="Add exam", command=self.open_add_exam).pack(side="left")
+        ttk.Button(bar, text="Delete exam", command=self.delete_selected_exam).pack(
+            side="left", padx=5
+        )
+
+    def open_add_exam(self):
+        ExamDialog(self, on_saved=self.refresh_exams)
+
+    def selected_exam_id(self):
+        selection = self.exam_tree.selection()
+        if not selection:
+            return None
+        return int(self.exam_tree.item(selection[0], "values")[0])
+
+    def delete_selected_exam(self):
+        exam_id = self.selected_exam_id()
+        if exam_id is None:
+            messagebox.showinfo("Nothing selected", "Click an exam first.")
+            return
+        if messagebox.askyesno("Delete", "Delete this exam permanently?"):
+            exams.delete_exam(exam_id)
+            self.refresh_exams()
+
+    def refresh_exams(self):
+        for row in self.exam_tree.get_children():
+            self.exam_tree.delete(row)
+        today = date.today()
+        for exam in exams.list_exams():
+            days = (date.fromisoformat(exam["date"]) - today).days
+            if days < 0:
+                left, tags = "passed", ("finished",)
+            elif days == 0:
+                left, tags = "today", ("soon",)
+            elif days <= 3:
+                left, tags = f"in {days} d", ("soon",)
+            else:
+                left, tags = f"in {days} d", ()
+            self.exam_tree.insert(
+                "",
+                "end",
+                values=(exam["id"], exam["date"], left, exam["subject"], len(exam["topics"])),
+                tags=tags,
+            )
+        self.show_plan()
+
+    def set_plan_text(self, text):
+        self.plan_text.configure(state="normal")
+        self.plan_text.delete("1.0", "end")
+        self.plan_text.insert("1.0", text)
+        self.plan_text.configure(state="disabled")
+
+    def show_plan(self, event=None):
+        exam_id = self.selected_exam_id()
+        if exam_id is None:
+            self.set_plan_text("Select an exam to see its study plan.")
+            return
+        for exam in exams.list_exams():
+            if exam["id"] == exam_id:
+                exam_date = date.fromisoformat(exam["date"])
+                plan = exams.make_plan(exam["topics"], exam_date)
+                if not plan:
+                    self.set_plan_text("No plan: the exam is today or has passed.")
+                    return
+                lines = [
+                    f"{day.strftime('%a %d %b')}:  {', '.join(day_topics)}"
+                    for day, day_topics in plan
+                ]
+                lines.append(f"{exam_date.strftime('%a %d %b')}:  EXAM")
+                self.set_plan_text("\n".join(lines))
+                return
 
 
 def main():
