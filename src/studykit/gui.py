@@ -229,12 +229,16 @@ class App(tk.Tk):
         self.apply_theme_colors()
 
     def apply_theme_colors(self):
-        """Colors that ttk styles can't set: table row tags and the plan text box."""
+        """Colors that ttk styles can't set: row tags, cards, and the plan text box."""
         p = theme.palette()
         for tree in (self.tree, self.exam_tree):
             tree.tag_configure("overdue", foreground=p["overdue"])
             tree.tag_configure("soon", foreground=p["soon"])
             tree.tag_configure("finished", foreground=p["finished"])
+        for card in self.cards:
+            card.configure(
+                bg=p["field"], highlightbackground=p["border"], highlightcolor=p["border"]
+            )
         self.plan_text.configure(
             bg=p["field"],
             fg=p["fg"],
@@ -261,6 +265,30 @@ class App(tk.Tk):
     # ---------- Deadlines tab ----------
 
     def build_deadlines_tab(self):
+        # summary cards
+        summary = ttk.Frame(self.deadlines_tab)
+        summary.pack(fill="x", padx=10, pady=(10, 0))
+        self.cards = []
+        self.card_values = {}
+        card_specs = [
+            ("overdue", "Overdue", "Danger.CardValue.TLabel"),
+            ("week", "Due in the next 7 days", "Warn.CardValue.TLabel"),
+            ("finished", "Finished", "Quiet.CardValue.TLabel"),
+        ]
+        for column, (key, caption, value_style) in enumerate(card_specs):
+            summary.columnconfigure(column, weight=1, uniform="cards")
+            card = tk.Frame(summary, highlightthickness=1)
+            right_gap = theme.px(10) if column < len(card_specs) - 1 else 0
+            card.grid(row=0, column=column, sticky="ew", padx=(0, right_gap))
+            value = ttk.Label(card, text="0", style=value_style)
+            value.pack(anchor="w", padx=theme.px(14), pady=(theme.px(8), 0))
+            ttk.Label(card, text=caption, style="CardCaption.TLabel").pack(
+                anchor="w", padx=theme.px(14), pady=(0, theme.px(8))
+            )
+            self.cards.append(card)
+            self.card_values[key] = value
+
+        # deadlines table
         columns = ("id", "due", "left", "subject", "title")
         self.tree = ttk.Treeview(
             self.deadlines_tab, columns=columns, show="headings", selectmode="browse"
@@ -275,17 +303,17 @@ class App(tk.Tk):
                 ("title", "Title", 280, True),
             ],
         )
-        self.tree.tag_configure("overdue", foreground="#c0392b")
-        self.tree.tag_configure("soon", foreground="#d68910")
-        self.tree.tag_configure("finished", foreground="#7f8c8d")
-        self.tree.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+        self.tree.pack(fill="both", expand=True, padx=10, pady=(theme.px(10), 0))
         self.tree.bind("<Double-1>", self.open_edit)
+        self.empty_label = ttk.Label(self.tree, style="Empty.TLabel", justify="center")
 
         self.show_archive = tk.BooleanVar(value=False)
 
         bar = ttk.Frame(self.deadlines_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(bar, text="Add deadline", style="Accent.TButton", command=self.open_add).pack(side="left")
+        ttk.Button(
+            bar, text="Add deadline", style="Accent.TButton", command=self.open_add
+        ).pack(side="left")
         ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
         ttk.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
         ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left", padx=5)
@@ -379,25 +407,36 @@ class App(tk.Tk):
                     values=(item["id"], item["due"], "finished", item["subject"], item["title"]),
                     tags=("finished",),
                 )
-            return
+            empty_text = "The archive is empty.\nFinished deadlines appear here."
+        else:
+            self.title("study-kit")
+            for item in deadlines.list_deadlines():
+                days = deadlines.days_left(item)
+                if days < 0:
+                    left, tags = f"overdue {-days} d", ("overdue",)
+                elif days == 0:
+                    left, tags = "today", ("soon",)
+                elif days <= 3:
+                    left, tags = f"in {days} d", ("soon",)
+                else:
+                    left, tags = f"in {days} d", ()
+                self.tree.insert(
+                    "",
+                    "end",
+                    values=(item["id"], item["due"], left, item["subject"], item["title"]),
+                    tags=tags,
+                )
+            empty_text = "No deadlines yet.\nClick Add deadline to create your first one."
 
-        self.title("study-kit")
-        for item in deadlines.list_deadlines():
-            days = deadlines.days_left(item)
-            if days < 0:
-                left, tags = f"overdue {-days} d", ("overdue",)
-            elif days == 0:
-                left, tags = "today", ("soon",)
-            elif days <= 3:
-                left, tags = f"in {days} d", ("soon",)
-            else:
-                left, tags = f"in {days} d", ()
-            self.tree.insert(
-                "",
-                "end",
-                values=(item["id"], item["due"], left, item["subject"], item["title"]),
-                tags=tags,
-            )
+        if self.tree.get_children():
+            self.empty_label.place_forget()
+        else:
+            self.empty_label.configure(text=empty_text)
+            self.empty_label.place(relx=0.5, rely=0.5, anchor="center")
+
+        counts = deadlines.summary()
+        for key, label in self.card_values.items():
+            label.configure(text=str(counts[key]))
 
     # ---------- Exams tab ----------
 
@@ -419,18 +458,24 @@ class App(tk.Tk):
                 ("topics", "Topics", 80, False),
             ],
         )
-        self.exam_tree.tag_configure("soon", foreground="#d68910")
-        self.exam_tree.tag_configure("finished", foreground="#7f8c8d")
         self.exam_tree.pack(fill="x")
         self.exam_tree.bind("<<TreeviewSelect>>", self.show_plan)
+        self.exam_empty_label = ttk.Label(
+            self.exam_tree,
+            text="No exams yet.\nClick Add exam to plan your first one.",
+            style="Empty.TLabel",
+            justify="center",
+        )
 
-        ttk.Label(top, text="Study plan").pack(anchor="w", pady=(10, 2))
+        ttk.Label(top, text="Study plan", style="Heading.TLabel").pack(anchor="w", pady=(10, 2))
         self.plan_text = tk.Text(top, height=8, state="disabled", wrap="word")
         self.plan_text.pack(fill="both", expand=True)
 
         bar = ttk.Frame(self.exams_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam).pack(side="left")
+        ttk.Button(
+            bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam
+        ).pack(side="left")
         ttk.Button(bar, text="Delete exam", command=self.delete_selected_exam).pack(
             side="left", padx=5
         )
@@ -473,6 +518,10 @@ class App(tk.Tk):
                 values=(exam["id"], exam["date"], left, exam["subject"], len(exam["topics"])),
                 tags=tags,
             )
+        if self.exam_tree.get_children():
+            self.exam_empty_label.place_forget()
+        else:
+            self.exam_empty_label.place(relx=0.5, rely=0.5, anchor="center")
         self.show_plan()
 
     def set_plan_text(self, text):

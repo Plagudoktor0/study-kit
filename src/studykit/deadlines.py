@@ -85,3 +85,18 @@ def update_deadline(deadline_id: int, title: str, subject: str, due: date) -> di
             storage.save(data)
             return item
     return None
+
+def summary(today: date | None = None) -> dict:
+    """Counts for the dashboard cards. 'week' means due today up to 7 days ahead."""
+    today = today or date.today()
+    items = storage.load()["deadlines"]
+    active = [d for d in items if not d["done"]]
+    overdue = 0
+    week = 0
+    for item in active:
+        left = (date.fromisoformat(item["due"]) - today).days
+        if left < 0:
+            overdue += 1
+        elif left <= 7:
+            week += 1
+    return {"overdue": overdue, "week": week, "finished": len(items) - len(active)}

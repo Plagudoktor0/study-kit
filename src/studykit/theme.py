@@ -17,6 +17,7 @@ LIGHT = {
     "overdue": "#c0392b",
     "soon": "#d68910",
     "finished": "#7f8c8d",
+    "muted": "#6b6b6b",
 }
 
 DARK = {
@@ -32,6 +33,7 @@ DARK = {
     "overdue": "#ff6b6b",
     "soon": "#f0a030",
     "finished": "#8a8a8a",
+    "muted": "#9a9a9a",
 }
 
 PALETTES = {"light": LIGHT, "dark": DARK}
@@ -213,6 +215,23 @@ def apply(root, mode: str) -> str:
         background=[("selected", p["bg"])],
         foreground=[("selected", p["fg"])],
     )
+
+        # dashboard cards, headings, empty-state hints
+    family = default_font.actual("family")
+    size = abs(default_font.actual("size"))
+    style.configure("Card.TLabel", background=p["field"], foreground=p["fg"])
+    style.configure(
+        "CardValue.TLabel",
+        background=p["field"],
+        foreground=p["fg"],
+        font=(family, size * 2, "bold"),
+    )
+    style.configure("Danger.CardValue.TLabel", foreground=p["overdue"])
+    style.configure("Warn.CardValue.TLabel", foreground=p["soon"])
+    style.configure("Quiet.CardValue.TLabel", foreground=p["finished"])
+    style.configure("CardCaption.TLabel", background=p["field"], foreground=p["muted"])
+    style.configure("Empty.TLabel", background=p["field"], foreground=p["muted"])
+    style.configure("Heading.TLabel", font=(family, size + 1, "bold"))
 
     # plain tk widgets (windows, text boxes, dropdown lists) use the option database
     root.configure(bg=p["bg"])

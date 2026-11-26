@@ -108,4 +108,18 @@ def test_update_keeps_done_status():
 
 
 def test_update_unknown_id_returns_none():
-    assert deadlines.update_deadline(99, "x", "", date(2026, 12, 1)) is None      
+    assert deadlines.update_deadline(99, "x", "", date(2026, 12, 1)) is None    
+
+def test_summary_counts():
+    today = date(2026, 11, 24)
+    deadlines.add_deadline("late", "", date(2026, 11, 20))
+    deadlines.add_deadline("today", "", date(2026, 11, 24))
+    deadlines.add_deadline("in 7 days", "", date(2026, 12, 1))
+    deadlines.add_deadline("in 8 days", "", date(2026, 12, 2))
+    deadlines.add_deadline("finished", "", date(2026, 11, 25))
+    deadlines.mark_done(5)
+    assert deadlines.summary(today) == {"overdue": 1, "week": 2, "finished": 1}
+
+
+def test_summary_when_empty():
+    assert deadlines.summary(date(2026, 11, 24)) == {"overdue": 0, "week": 0, "finished": 0}      
