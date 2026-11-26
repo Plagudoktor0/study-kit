@@ -68,6 +68,7 @@ pytest
 pip install pyinstaller
 pyinstaller --onefile --windowed --name study-kit --paths src --hidden-import babel.numbers --hidden-import winotify launcher.py
 ```
+[NOT UPDATED YET]
 
 ## Roadmap
 
