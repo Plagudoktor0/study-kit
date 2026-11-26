@@ -94,7 +94,7 @@ class AddDialog(tk.Toplevel):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(buttons, text="Save", command=self.save).pack(side="left", padx=5)
+        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(side="left", padx=5)
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         title_entry.focus()
@@ -149,7 +149,7 @@ class ExamDialog(tk.Toplevel):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=4, column=0, columnspan=2, pady=10)
-        ttk.Button(buttons, text="Save", command=self.save).pack(side="left", padx=5)
+        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(side="left", padx=5)
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         subject_box.focus()
@@ -174,12 +174,18 @@ class App(tk.Tk):
     """Main window with two tabs: Deadlines and Exams."""
 
     def __init__(self):
+
         super().__init__()
         self.title("study-kit")
-        self.geometry("760x420")
 
         self.theme_mode = theme.get_mode()
         self.theme_name = theme.apply(self, self.theme_mode)
+
+        # window size scales with the screen, but never exceeds it
+        width = min(theme.px(900), int(self.winfo_screenwidth() * 0.9))
+        height = min(theme.px(560), int(self.winfo_screenheight() * 0.85))
+        self.geometry(f"{width}x{height}")
+        self.minsize(min(theme.px(820), width), min(theme.px(440), height))
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
@@ -244,6 +250,14 @@ class App(tk.Tk):
                 self.reapply_theme()
         self.after(5000, self.poll_theme)
 
+    def setup_columns(self, tree, columns):
+        """columns: (name, heading, width at 96 DPI, stretches with the window)."""
+        for name, text, width, stretch in columns:
+            tree.heading(name, text=text)
+            tree.column(
+                name, width=theme.px(width), minwidth=theme.px(40), anchor="w", stretch=stretch
+            )
+
     # ---------- Deadlines tab ----------
 
     def build_deadlines_tab(self):
@@ -251,15 +265,16 @@ class App(tk.Tk):
         self.tree = ttk.Treeview(
             self.deadlines_tab, columns=columns, show="headings", selectmode="browse"
         )
-        for name, text, width in [
-            ("id", "ID", 40),
-            ("due", "Due", 90),
-            ("left", "Left", 90),
-            ("subject", "Subject", 110),
-            ("title", "Title", 250),
-        ]:
-            self.tree.heading(name, text=text)
-            self.tree.column(name, width=width, anchor="w")
+        self.setup_columns(
+            self.tree,
+            [
+                ("id", "ID", 40, False),
+                ("due", "Due", 100, False),
+                ("left", "Left", 100, False),
+                ("subject", "Subject", 140, True),
+                ("title", "Title", 280, True),
+            ],
+        )
         self.tree.tag_configure("overdue", foreground="#c0392b")
         self.tree.tag_configure("soon", foreground="#d68910")
         self.tree.tag_configure("finished", foreground="#7f8c8d")
@@ -270,7 +285,7 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self.deadlines_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(bar, text="Add deadline", command=self.open_add).pack(side="left")
+        ttk.Button(bar, text="Add deadline", style="Accent.TButton", command=self.open_add).pack(side="left")
         ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
         ttk.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
         ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left", padx=5)
@@ -394,15 +409,16 @@ class App(tk.Tk):
         self.exam_tree = ttk.Treeview(
             top, columns=columns, show="headings", selectmode="browse", height=6
         )
-        for name, text, width in [
-            ("id", "ID", 40),
-            ("date", "Exam date", 100),
-            ("left", "Left", 90),
-            ("subject", "Subject", 200),
-            ("topics", "Topics", 80),
-        ]:
-            self.exam_tree.heading(name, text=text)
-            self.exam_tree.column(name, width=width, anchor="w")
+        self.setup_columns(
+            self.exam_tree,
+            [
+                ("id", "ID", 40, False),
+                ("date", "Exam date", 110, False),
+                ("left", "Left", 100, False),
+                ("subject", "Subject", 260, True),
+                ("topics", "Topics", 80, False),
+            ],
+        )
         self.exam_tree.tag_configure("soon", foreground="#d68910")
         self.exam_tree.tag_configure("finished", foreground="#7f8c8d")
         self.exam_tree.pack(fill="x")
@@ -414,7 +430,7 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self.exams_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(bar, text="Add exam", command=self.open_add_exam).pack(side="left")
+        ttk.Button(bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam).pack(side="left")
         ttk.Button(bar, text="Delete exam", command=self.delete_selected_exam).pack(
             side="left", padx=5
         )
@@ -487,6 +503,7 @@ class App(tk.Tk):
 
 
 def main():
+    theme.enable_high_dpi()  # must come before the window is created
     App().mainloop()
 
 
