@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from studykit import backup, deadlines, exams, ics, pdf_tools, timeleft
+from studykit import backup, deadlines, exams, ics, ocr, pdf_tools, timeleft
 
 app = typer.Typer(help="study-kit: small tools for student life.")
 exam_app = typer.Typer(help="Add exams and get a day-by-day study plan.")
@@ -285,13 +285,37 @@ def pdf_rotate(
 def pdf_text(
     source: Path = typer.Argument(..., help="PDF to read"),
     output: Path = typer.Option(None, "--output", "-o", help="Default: <name>.txt"),
+    use_ocr: bool = typer.Option(False, "--ocr", help="Also read text inside pictures (slow)"),
+    lang: str = typer.Option("en", "--lang", "-l", help="OCR language: en, ko or ru"),
+    all_pages: bool = typer.Option(
+        False, "--all-pages", help="With --ocr: read every page as a picture"
+    ),
 ):
-    """Extract the text of a PDF into a .txt file."""
+    """Extract the text of a PDF into a .txt file. Add --ocr for scans and slide images."""
     output = output or source.with_suffix(".txt")
-    count = pdf_run(lambda: pdf_tools.extract_text(source, output))
-    if count == 0:
-        console.print("[yellow]No text found. This PDF may be a scan (it needs OCR).[/yellow]")
-    console.print(f"[green]Saved:[/green] {output} ({count} characters)")
+    if not use_ocr:
+        count = pdf_run(lambda: pdf_tools.extract_text(source, output))
+        if count == 0:
+            console.print(
+                "[yellow]No text found. This PDF may be a scan. Try again with --ocr.[/yellow]"
+            )
+        console.print(f"[green]Saved:[/green] {output} ({count} characters)")
+        return
+
+    if lang not in ocr.LANGUAGES:
+        fail(f"Unknown language '{lang}'. Choose from: {', '.join(ocr.LANGUAGES)}")
+    with console.status("Reading pages (the first run downloads a model)...") as status:
+
+        def progress(done: int, total: int) -> None:
+            status.update(f"Reading pages... {done}/{total}")
+
+        result = pdf_run(lambda: ocr.extract_text_ocr(source, output, lang, all_pages, progress))
+    if result["characters"] == 0:
+        console.print("[yellow]No text found, even with OCR.[/yellow]")
+    console.print(
+        f"[green]Saved:[/green] {output} ({result['characters']} characters, "
+        f"{result['ocr_pages']} of {result['pages']} pages read with OCR)"
+    )
 
 
 if __name__ == "__main__":
