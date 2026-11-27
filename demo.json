@@ -1,0 +1,66 @@
+{
+  "deadlines": [
+    {
+      "id": 1,
+      "title": "Math homework",
+      "subject": "Math",
+      "due": "2026-11-25",
+      "done": false
+    },
+    {
+      "id": 2,
+      "title": "Physics quiz prep",
+      "subject": "Physics",
+      "due": "2026-11-27",
+      "done": false
+    },
+    {
+      "id": 3,
+      "title": "Programming lab report",
+      "subject": "Programming",
+      "due": "2026-11-30",
+      "done": false
+    },
+    {
+      "id": 4,
+      "title": "History essay",
+      "subject": "History",
+      "due": "2026-12-03",
+      "done": false
+    },
+    {
+      "id": 5,
+      "title": "Group project demo",
+      "subject": "Programming",
+      "due": "2026-12-18",
+      "done": false
+    },
+    {
+      "id": 6,
+      "title": "Old reading",
+      "subject": "History",
+      "due": "2026-11-20",
+      "done": true
+    }
+  ],
+  "exams": [
+    {
+      "id": 1,
+      "subject": "Computer Science",
+      "date": "2026-12-07",
+      "topics": [
+        "ML",
+        "Data Science",
+        "Embedded Systems",
+        "Math"
+      ]
+    }
+  ],
+  "subjects": [
+    "Computer Science"
+  ],
+  "settings": {
+    "last_notified": "2026-11-27",
+    "theme": "light"
+  }
+}

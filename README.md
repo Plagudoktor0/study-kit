@@ -1,29 +1,42 @@
 # study-kit
 
-A small Windows app for tracking study deadlines. It opens as a simple window, so you can add subjects and deadlines with a few clicks, with no terminal needed.
+A small Windows app for tracking study deadlines and planning exams. It opens as a simple window, so you can add subjects, deadlines, and exams with a few clicks, with no terminal needed.
 
-![Main window](docs/screenshot-1.jpg)
+![Deadlines with summary cards, dark theme](docs/screenshot-1.jpg)
 
-![Archive window](docs/screenshot-2.jpg)
+![Archive view, light theme](docs/screenshot-4.jpg)
 
-![Calendar](docs/screenshot-3.jpg)
+![Archive view, dark theme](docs/screenshot-2.jpg)
 
-[NOT UPDATED YET]
+![Exam study plan, light theme](docs/screenshot-3.jpg)
 
 ## Features
 
+**Deadlines**
+
 - Add deadlines with a title, a subject, and a calendar date picker
 - Subjects are remembered and offered in a dropdown
+- Summary cards show how many deadlines are overdue, due in the next 7 days, and finished
 - Colors show urgency: red when overdue, orange when due within 3 days
-- Mark deadlines as done, then view them in the archive or restore them
-- "Start with Windows" checkbox to open the app at login
 - Edit any deadline by double-clicking it
+- Mark deadlines as done, then view them in the archive or restore them
+
+**Exam planner**
+
+- Add an exam with its date and a list of topics
+- Get a day-by-day study plan that spreads the topics evenly over the days left
+
+**App**
+
+- Light, dark, or follow-the-system theme
+- Sharp on high-DPI screens, and the window resizes to fit
 - Daily Windows pop-up reminder for deadlines that are overdue, due today, or due tomorrow (can be turned off)
-- New design, sharper resolution
-- Exam planner
+- "Start with Windows" checkbox to open the app at login
 - Command-line tool too: `studykit add`, `list`, `done`, `next`
 
 ## Download (Windows)
+
+Windows only for now. macOS support is planned.
 
 1. Go to the [Releases page](https://github.com/Plagudoktor0/study-kit/releases) and download the latest `.zip`.
 2. Unzip it and double-click `study-kit.exe`.
@@ -55,6 +68,23 @@ studykit next
 studykit done 1
 ```
 
+## Project structure
+
+```
+src/studykit/
+  gui.py         window, tabs, and dialogs
+  deadlines.py   deadline logic: add, edit, done, archive, summary
+  exams.py       exam logic and the study-plan algorithm
+  subjects.py    saved subjects
+  reminders.py   which deadlines need a reminder (once per day)
+  notifier.py    Windows pop-up notification
+  autostart.py   "Start with Windows" setting
+  theme.py       light/dark themes and high-DPI scaling
+  storage.py     JSON data file
+  cli.py         command-line tool
+tests/           pytest tests for the logic
+```
+
 ## Tests
 
 ```
@@ -64,19 +94,24 @@ pytest
 
 ## Build the exe
 
+Run these inside the activated virtual environment:
+
 ```
+pip install -e .
 pip install pyinstaller
 pyinstaller --onefile --windowed --name study-kit --paths src --hidden-import babel.numbers --hidden-import winotify launcher.py
 ```
-[NOT UPDATED YET]
+
+The exe appears in the `dist` folder. The two `--hidden-import` options are needed because the calendar and notification libraries load some modules in a way PyInstaller can't detect.
 
 ## Roadmap
 
 - [x] Edit a deadline by double-clicking it
-- [x] Windows notifications for deadlines due tomorrow
+- [x] Windows notifications for deadlines that are due soon
 - [x] Exam planner
-- [ ] PDF toolkit (merge, split)
 - [x] Dark mode
+- [ ] macOS support
+- [ ] PDF toolkit (merge, split)
 
 ## License
 
