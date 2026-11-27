@@ -16,8 +16,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e . pyinstaller
-      - run: pyinstaller --windowed --name study-kit --paths src --hidden-import babel.numbers launcher.py
+      - run: pip install -e ".[ocr]" pyinstaller
+      - run: pyinstaller --windowed --name study-kit --paths src --hidden-import babel.numbers --collect-all rapidocr launcher.py
       - run: ditto -c -k --keepParent dist/study-kit.app dist/study-kit-macos.zip
       - uses: actions/upload-artifact@v4
         with:
