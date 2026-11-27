@@ -21,6 +21,9 @@ LIGHT = {
     "border": "#d9d9d9",
     "select": "#0078d4",
     "select_fg": "#ffffff",
+    "hover": "#eceff3",  # table row under the mouse, tab under the mouse, menu button
+    "tab": "#ffffff",  # the selected tab
+    "bar": "#ffffff",  # title bar and menu bar
     "accent": "#0067c0",
     "accent_hover": "#00539a",
     "accent_pressed": "#004278",
@@ -48,6 +51,9 @@ DARK = {
     "border": "#2b2d31",
     "select": "#404249",
     "select_fg": "#ffffff",
+    "hover": "#35373c",  # table row under the mouse, tab under the mouse, menu button
+    "tab": "#404249",  # the selected tab
+    "bar": "#1e1f22",  # title bar and menu bar
     "accent": "#5865f2",
     "accent_hover": "#4752c4",
     "accent_pressed": "#3c45a5",
@@ -119,6 +125,47 @@ def system_is_dark() -> bool:
         return False
 
 
+def style_titlebar(window) -> None:
+    """Windows 10/11: make the title bar follow the theme (dark bar in the dark theme)."""
+    if sys.platform != "win32":
+        return
+    import ctypes
+    from ctypes import wintypes
+
+    try:
+        window.update_idletasks()
+        user32 = ctypes.WinDLL("user32")
+        dwmapi = ctypes.WinDLL("dwmapi")
+        user32.GetParent.argtypes = [wintypes.HWND]
+        user32.GetParent.restype = wintypes.HWND
+        dwmapi.DwmSetWindowAttribute.argtypes = [
+            wintypes.HWND,
+            wintypes.DWORD,
+            wintypes.LPCVOID,
+            wintypes.DWORD,
+        ]
+        hwnd = user32.GetParent(window.winfo_id())
+
+        def set_attribute(attribute: int, value: int) -> int:
+            number = ctypes.c_uint(value)
+            return dwmapi.DwmSetWindowAttribute(hwnd, attribute, ctypes.byref(number), 4)
+
+        dark = _current is DARK
+        # 20 works on Windows 11 and recent Windows 10, 19 on the first Windows 10 versions
+        if set_attribute(20, int(dark)) != 0:
+            set_attribute(19, int(dark))
+
+        # Windows 11 only: exact colors (0xFFFFFFFF means "the system default")
+        def colorref(color: str) -> int:
+            red, green, blue = (int(color[i : i + 2], 16) for i in (1, 3, 5))
+            return red | green << 8 | blue << 16
+
+        set_attribute(35, colorref(_current["bar"]) if dark else 0xFFFFFFFF)  # title bar
+        set_attribute(36, colorref(_current["fg"]) if dark else 0xFFFFFFFF)  # title text
+    except Exception:
+        pass  # a dark title bar is nice to have, never a reason to crash
+
+
 def resolve_name(mode: str, system_dark: bool) -> str:
     """Turn a mode ('system', 'light', 'dark') into 'light' or 'dark'."""
     if mode == "dark":
@@ -141,6 +188,52 @@ def enable_high_dpi() -> None:
             ctypes.windll.user32.SetProcessDPIAware()
         except Exception:
             pass  # sharpness is nice to have, never a reason to crash
+
+
+def paint_entry_corners(style) -> None:
+    """Stop text fields from showing 4 little light dots in their corners.
+
+    The built-in frame of the "clam" style never paints its 4 corner pixels. We put a plain
+    one-color rectangle (the "trough" element, a single fast fill) behind the frame, so the
+    corners get painted too. (A picture-based frame fixed the dots too, but Tk draws those
+    by repeating the picture pixel by pixel, which made wide text fields very slow.)
+    """
+    import tkinter as tk
+
+    try:
+        style.layout(
+            "TEntry",
+            [
+                (
+                    "trough",
+                    {
+                        "sticky": "nswe",
+                        "children": [
+                            (
+                                "Entry.field",
+                                {
+                                    "sticky": "nswe",
+                                    "border": "1",
+                                    "children": [
+                                        (
+                                            "Entry.padding",
+                                            {
+                                                "sticky": "nswe",
+                                                "children": [
+                                                    ("Entry.textarea", {"sticky": "nswe"})
+                                                ],
+                                            },
+                                        )
+                                    ],
+                                },
+                            )
+                        ],
+                    },
+                )
+            ],
+        )
+    except tk.TclError:
+        pass  # keep the built-in frame: a few light corner dots are better than a crash
 
 
 def apply(root, mode: str) -> str:
@@ -249,6 +342,7 @@ def apply(root, mode: str) -> str:
         **field_edge,
     )
     style.map("TEntry", fieldbackground=[("readonly", p["input"])], **focus_edge)
+    paint_entry_corners(style)
     style.configure(
         "TCombobox",
         fieldbackground=p["input"],
@@ -302,7 +396,8 @@ def apply(root, mode: str) -> str:
         foreground=[("active", p["fg"])],
     )
 
-    # tabs: the selected tab melts into the page, the others are a darker strip
+    # tabs: no box around the others, a soft highlight under the mouse, a clear one when selected
+    # (the "clam" style shrinks the selected tab unless its padding is set again for that state)
     style.configure(
         "TNotebook",
         background=p["bg"],
@@ -310,20 +405,23 @@ def apply(root, mode: str) -> str:
         tabmargins=(px(10), px(8), px(10), 0),
         **flat(p["bg"]),
     )
+    tab_padding = (px(18), px(8))
     style.configure(
         "TNotebook.Tab",
-        background=p["field"],
+        background=p["bg"],
         foreground=p["muted"],
-        padding=(px(18), px(8)),
+        padding=tab_padding,
         borderwidth=0,
         focuscolor=p["bg"],
-        **flat(p["field"]),
+        **flat(p["bg"]),
     )
     style.map(
         "TNotebook.Tab",
-        background=[("selected", p["bg"]), ("active", p["button"])],
+        background=[("selected", p["tab"]), ("active", p["hover"])],
         foreground=[("selected", p["fg"]), ("active", p["fg"])],
-        **flat_map(selected=p["bg"], active=p["button"]),
+        padding=[("selected", tab_padding)],
+        expand=[("selected", (0, 0, 0, 0))],
+        **flat_map(selected=p["tab"], active=p["hover"]),
     )
 
     style.configure(
@@ -332,7 +430,9 @@ def apply(root, mode: str) -> str:
         troughcolor=p["input"],
         thickness=px(8),
         borderwidth=0,
-        **flat(p["accent"]),
+        bordercolor=p["input"],  # the edge of the empty bar: same color as the bar's background
+        lightcolor=p["accent"],
+        darkcolor=p["accent"],
     )
     for orient in ("Vertical", "Horizontal"):
         style.configure(
@@ -378,4 +478,5 @@ def apply(root, mode: str) -> str:
     root.option_add("*TCombobox*Listbox.foreground", p["fg"])
     root.option_add("*TCombobox*Listbox.selectBackground", p["select"])
     root.option_add("*TCombobox*Listbox.selectForeground", p["select_fg"])
+    style_titlebar(root)
     return name

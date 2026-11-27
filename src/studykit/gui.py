@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from datetime import date
 from tkinter import filedialog, messagebox, ttk
@@ -15,6 +16,7 @@ from studykit import (
     subjects,
     theme,
     timeleft,
+    widgets,
 )
 from studykit.pdf_panel import PdfPanel
 
@@ -29,7 +31,7 @@ class DatePicker(ttk.Frame):
         self.date = initial or date.today()
         self.text = tk.StringVar(value=self.date.isoformat())
         ttk.Entry(self, textvariable=self.text, width=22, state="readonly").pack(side="left")
-        ttk.Button(self, text="Pick...", width=7, command=self.open_popup).pack(
+        widgets.Button(self, text="Pick...", width=7, command=self.open_popup).pack(
             side="left", padx=(5, 0)
         )
 
@@ -72,7 +74,8 @@ class DatePicker(ttk.Frame):
                 self.text.set(chosen.isoformat())
             top.destroy()
 
-        ttk.Button(top, text="OK", command=choose).pack(pady=(0, 10))
+        widgets.Button(top, text="OK", command=choose).pack(pady=(0, 10))
+        theme.style_titlebar(top)
 
 
 class AddDialog(tk.Toplevel):
@@ -108,13 +111,14 @@ class AddDialog(tk.Toplevel):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(
+        widgets.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(
             side="left", padx=5
         )
-        ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
+        widgets.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         title_entry.focus()
         self.bind("<Escape>", lambda event: self.destroy())
+        theme.style_titlebar(self)
 
     def save(self):
         title = self.title_var.get().strip()
@@ -164,13 +168,14 @@ class ExamDialog(tk.Toplevel):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=4, column=0, columnspan=2, pady=10)
-        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(
+        widgets.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(
             side="left", padx=5
         )
-        ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
+        widgets.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         subject_box.focus()
         self.bind("<Escape>", lambda event: self.destroy())
+        theme.style_titlebar(self)
 
     def save(self):
         subject = self.subject_var.get().strip()
@@ -194,14 +199,9 @@ class App(tk.Tk):
         super().__init__()
         self.title("study-kit")
 
+        self._refresh_job = None
         self.theme_mode = theme.get_mode()
         self.theme_name = theme.apply(self, self.theme_mode)
-
-        # window size scales with the screen, but never exceeds it
-        width = min(theme.px(900), int(self.winfo_screenwidth() * 0.9))
-        height = min(theme.px(560), int(self.winfo_screenheight() * 0.85))
-        self.geometry(f"{width}x{height}")
-        self.minsize(min(theme.px(820), width), min(theme.px(440), height))
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
@@ -217,21 +217,57 @@ class App(tk.Tk):
         self.build_exams_tab()
         self.build_footer()
         self.apply_theme_colors()
+        for tree in (self.tree, self.exam_tree):
+            widgets.RowHover(tree)  # highlight the row under the mouse
 
         self.refresh()
         self.refresh_exams()
+        self.fit_window()
         self.after(2000, self.check_reminders)  # first reminder check shortly after start
         self.after(5000, self.poll_theme)  # follow the Windows theme
 
+    def fit_window(self):
+        """Open big enough to show every button, centered, and never larger than the screen."""
+        self.update_idletasks()
+        screen_width, screen_height = self.winfo_screenwidth(), self.winfo_screenheight()
+        width = min(max(theme.px(1000), self.winfo_reqwidth()), int(screen_width * 0.92))
+        height = min(max(theme.px(700), self.winfo_reqheight()), int(screen_height * 0.88))
+        left = max(0, (screen_width - width) // 2)
+        top = max(0, (screen_height - height) // 3)
+        self.geometry(f"{width}x{height}+{left}+{top}")
+        self.minsize(min(theme.px(860), width), min(theme.px(560), height))
+
     def build_menu(self):
-        menubar = tk.Menu(self)
-        file_menu = tk.Menu(menubar, tearoff=False)
+        """The File menu. On Windows it is a bar we draw ourselves, so it can follow the theme
+        (the built-in Windows menu bar is always light). On macOS the system menu bar is used."""
+        self.menu_bar = None
+        if sys.platform == "darwin":
+            menubar = tk.Menu(self)
+            file_menu = tk.Menu(menubar, tearoff=False)
+            menubar.add_cascade(label="File", menu=file_menu)
+            self.configure(menu=menubar)
+        else:
+            self.menu_bar = tk.Frame(self, borderwidth=0, highlightthickness=0)
+            self.menu_bar.pack(side="top", fill="x", before=self.notebook)
+            self.file_button = tk.Menubutton(
+                self.menu_bar,
+                text="File",
+                borderwidth=0,
+                highlightthickness=0,
+                relief="flat",
+                padx=theme.px(14),
+                pady=theme.px(5),
+            )
+            self.file_button.pack(side="left")
+            file_menu = tk.Menu(
+                self.file_button, tearoff=False, borderwidth=0, activeborderwidth=0, relief="flat"
+            )
+            self.file_button.configure(menu=file_menu)
+        self.file_menu = file_menu
         file_menu.add_command(label="Export backup...", command=self.export_backup)
         file_menu.add_command(label="Import backup...", command=self.import_backup)
         file_menu.add_separator()
         file_menu.add_command(label="Export calendar (.ics)...", command=self.export_calendar)
-        menubar.add_cascade(label="File", menu=file_menu)
-        self.configure(menu=menubar)
 
     def export_backup(self):
         path = filedialog.asksaveasfilename(
@@ -340,6 +376,7 @@ class App(tk.Tk):
 
     def reapply_theme(self):
         self.theme_name = theme.apply(self, self.theme_mode)
+        widgets.restyle_all_buttons()
         self.apply_theme_colors()
 
     def apply_theme_colors(self):
@@ -349,6 +386,15 @@ class App(tk.Tk):
             tree.tag_configure("overdue", foreground=p["overdue"])
             tree.tag_configure("soon", foreground=p["soon"])
             tree.tag_configure("finished", foreground=p["finished"])
+            tree.tag_configure(widgets.HOVER_TAG, background=p["hover"])
+        if self.menu_bar is not None:
+            self.menu_bar.configure(bg=p["bar"])
+            self.file_button.configure(
+                bg=p["bar"], fg=p["fg"], activebackground=p["hover"], activeforeground=p["fg"]
+            )
+            self.file_menu.configure(
+                bg=p["field"], fg=p["fg"], activebackground=p["accent"], activeforeground="#ffffff"
+            )
         for card in self.cards:
             card.configure(
                 bg=p["field"], highlightbackground=p["border"], highlightcolor=p["border"]
@@ -418,8 +464,8 @@ class App(tk.Tk):
             width=18,
         )
         self.subject_box.pack(side="left", padx=(5, 15))
-        ttk.Button(filters, text="Clear", command=self.clear_filters).pack(side="left")
-        self.search_var.trace_add("write", lambda *args: self.refresh())
+        widgets.Button(filters, text="Clear", command=self.clear_filters).pack(side="left")
+        self.search_var.trace_add("write", lambda *args: self.refresh_soon())
         self.subject_box.bind("<<ComboboxSelected>>", lambda event: self.refresh())
 
         # deadlines table
@@ -445,16 +491,16 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self.deadlines_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(bar, text="Add deadline", style="Accent.TButton", command=self.open_add).pack(
-            side="left"
-        )
-        ttk.Button(bar, text="Done", style="Success.TButton", command=self.mark_selected_done).pack(
-            side="left", padx=5
-        )
-        ttk.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
-        ttk.Button(bar, text="Delete", style="Danger.TButton", command=self.delete_selected).pack(
-            side="left", padx=5
-        )
+        widgets.Button(
+            bar, text="Add deadline", style="Accent.TButton", command=self.open_add
+        ).pack(side="left")
+        widgets.Button(
+            bar, text="Done", style="Success.TButton", command=self.mark_selected_done
+        ).pack(side="left", padx=5)
+        widgets.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
+        widgets.Button(
+            bar, text="Delete", style="Danger.TButton", command=self.delete_selected
+        ).pack(side="left", padx=5)
         ttk.Checkbutton(
             bar, text="Show archive", variable=self.show_archive, command=self.refresh
         ).pack(side="right")
@@ -531,6 +577,16 @@ class App(tk.Tk):
         if messagebox.askyesno("Delete", "Delete this deadline permanently?"):
             deadlines.delete_deadline(deadline_id)
             self.refresh()
+
+    def refresh_soon(self):
+        """Refresh the table shortly after the last key press, not after every single key."""
+        if self._refresh_job is not None:
+            self.after_cancel(self._refresh_job)
+        self._refresh_job = self.after(150, self._refresh_now)
+
+    def _refresh_now(self):
+        self._refresh_job = None
+        self.refresh()
 
     def clear_filters(self):
         self.search_var.set("")
@@ -625,10 +681,10 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self.exams_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam).pack(
-            side="left"
-        )
-        ttk.Button(
+        widgets.Button(
+            bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam
+        ).pack(side="left")
+        widgets.Button(
             bar, text="Delete exam", style="Danger.TButton", command=self.delete_selected_exam
         ).pack(side="left", padx=5)
 

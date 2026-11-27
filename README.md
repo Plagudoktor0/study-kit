@@ -2,7 +2,7 @@
 
 A small desktop app for student life: track deadlines, plan exams, and handle PDFs (merge, split, rotate, extract text). It opens as a simple window, so you can do everything with a few clicks, with no terminal needed. There is also a command-line tool for the same features.
 
-Works on **Windows** and **macOS** (the macOS build is experimental, see below).
+Works on **Windows** and **macOS** (Apple Silicon).
 
 ![Deadlines with summary cards, dark theme](docs/screenshot-1.jpg)
 

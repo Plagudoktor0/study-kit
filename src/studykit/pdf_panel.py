@@ -5,7 +5,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from studykit import ocr, pdf_tools
+from studykit import ocr, pdf_tools, widgets
 
 PDF_TYPES = [("PDF files", "*.pdf"), ("All files", "*.*")]
 TEXT_TYPES = [("Text files", "*.txt"), ("All files", "*.*")]
@@ -39,7 +39,7 @@ class FilePicker(ttk.Frame):
         ttk.Entry(self, textvariable=self.text, width=48, state="readonly").pack(
             side="left", fill="x", expand=True
         )
-        ttk.Button(self, text="Browse...", command=self.browse).pack(side="left", padx=(5, 0))
+        widgets.Button(self, text="Browse...", command=self.browse).pack(side="left", padx=(5, 0))
 
     def browse(self):
         chosen = filedialog.askopenfilename(title="Choose a PDF", filetypes=PDF_TYPES)
@@ -82,9 +82,9 @@ class MergeTab(ttk.Frame):
             ("Move up", lambda: self.move(-1)),
             ("Move down", lambda: self.move(1)),
         ):
-            ttk.Button(side, text=text, command=command).pack(fill="x", pady=2)
+            widgets.Button(side, text=text, command=command).pack(fill="x", pady=2)
 
-        ttk.Button(self, text="Merge...", style="Accent.TButton", command=self.merge).pack(
+        widgets.Button(self, text="Merge...", style="Accent.TButton", command=self.merge).pack(
             anchor="w", padx=10, pady=10
         )
 
@@ -154,7 +154,7 @@ class SplitTab(ttk.Frame):
             row=2, column=1, sticky="w", **pad
         )
         ttk.Label(self, text="Example: 1-3, 5").grid(row=3, column=1, sticky="w", padx=10)
-        ttk.Button(self, text="Save pages...", style="Accent.TButton", command=self.split).grid(
+        widgets.Button(self, text="Save pages...", style="Accent.TButton", command=self.split).grid(
             row=4, column=1, sticky="w", **pad
         )
 
@@ -206,7 +206,7 @@ class RotateTab(ttk.Frame):
         ttk.Label(self, text="Leave empty to rotate every page. Example: 1-3, 5").grid(
             row=4, column=1, sticky="w", padx=10
         )
-        ttk.Button(self, text="Rotate...", style="Accent.TButton", command=self.rotate).grid(
+        widgets.Button(self, text="Rotate...", style="Accent.TButton", command=self.rotate).grid(
             row=5, column=1, sticky="w", **pad
         )
 
@@ -284,11 +284,11 @@ class TextTab(ttk.Frame):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=4, column=1, sticky="w", **pad)
-        self.extract_button = ttk.Button(
+        self.extract_button = widgets.Button(
             buttons, text="Extract text...", style="Accent.TButton", command=self.extract
         )
         self.extract_button.pack(side="left")
-        self.cancel_button = ttk.Button(buttons, text="Cancel", command=self.cancel)
+        self.cancel_button = widgets.Button(buttons, text="Cancel", command=self.cancel)
         self.cancel_button.pack(side="left", padx=(8, 0))
         self.progress = ttk.Progressbar(self, mode="determinate")
         self.progress.grid(row=5, column=1, sticky="ew", **pad)
