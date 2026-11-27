@@ -1,0 +1,30 @@
+{
+  "format": "study-kit-backup",
+  "version": 1,
+  "exported": "2026-11-27T14:21:07",
+  "deadlines": [
+    {
+      "id": 1,
+      "title": "Homework",
+      "subject": "Algorithm",
+      "due": "2026-12-01",
+      "done": false
+    },
+    {
+      "id": 2,
+      "title": "HW",
+      "subject": "Computer Architecture",
+      "due": "2026-11-26",
+      "done": true
+    }
+  ],
+  "exams": [],
+  "subjects": [
+    "CS",
+    "Data Science",
+    "Computer Architecture",
+    "Embeeded Systems",
+    "Algorithm",
+    "Discrete Mathematics"
+  ]
+}

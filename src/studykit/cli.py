@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from studykit import deadlines, exams, pdf_tools, timeleft
+from studykit import backup, deadlines, exams, ics, pdf_tools, timeleft
 
 app = typer.Typer(help="study-kit: small tools for student life.")
 exam_app = typer.Typer(help="Add exams and get a day-by-day study plan.")
@@ -111,6 +111,55 @@ def next_cmd():
         when = f"in {days} day(s)"
     subject = item["subject"] or "no subject"
     console.print(f"[bold]{item['title']}[/bold] ({subject}), due {item['due']}, {when}")
+
+
+# ---------- Backup and calendar ----------
+
+
+@app.command("export")
+def export_cmd(
+    output: Path = typer.Argument(..., help="Backup file to write, e.g. backup.json"),
+):
+    """Save all deadlines and exams to a backup file."""
+    try:
+        counts = backup.export_data(output)
+    except backup.BackupError as error:
+        fail(str(error))
+    console.print(
+        f"[green]Saved:[/green] {output} ({counts['deadlines']} deadlines, {counts['exams']} exams)"
+    )
+
+
+@app.command("import")
+def import_cmd(
+    source: Path = typer.Argument(..., help="Backup file made by 'studykit export'"),
+    replace: bool = typer.Option(
+        False, "--replace", help="Replace ALL current data (a copy of it is kept)"
+    ),
+):
+    """Load a backup. By default it is merged with your current data."""
+    try:
+        result = backup.import_data(source, replace=replace)
+    except backup.BackupError as error:
+        fail(str(error))
+    console.print(
+        f"[green]Imported:[/green] {result['deadlines']} deadlines, {result['exams']} exams "
+        f"({result['skipped']} already there)"
+    )
+
+
+@app.command("ics")
+def ics_cmd(
+    output: Path = typer.Argument(..., help="Calendar file to write, e.g. study.ics"),
+    include_done: bool = typer.Option(False, "--all", "-a", help="Include finished deadlines"),
+    no_exams: bool = typer.Option(False, "--no-exams", help="Deadlines only"),
+):
+    """Export deadlines and exams to a calendar file (.ics)."""
+    try:
+        count = ics.export_ics(output, include_done=include_done, include_exams=not no_exams)
+    except OSError as error:
+        fail(f"Could not write {output.name}: {error.strerror}")
+    console.print(f"[green]Saved:[/green] {output} ({count} events)")
 
 
 # ---------- Exams ----------

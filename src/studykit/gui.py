@@ -1,13 +1,15 @@
 import tkinter as tk
 from datetime import date
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from tkcalendar import Calendar
 
 from studykit import (
     autostart,
+    backup,
     deadlines,
     exams,
+    ics,
     notifier,
     reminders,
     subjects,
@@ -210,6 +212,7 @@ class App(tk.Tk):
         self.pdf_tab = PdfPanel(self.notebook)
         self.notebook.add(self.pdf_tab, text="PDF tools")
 
+        self.build_menu()
         self.build_deadlines_tab()
         self.build_exams_tab()
         self.build_footer()
@@ -219,6 +222,101 @@ class App(tk.Tk):
         self.refresh_exams()
         self.after(2000, self.check_reminders)  # first reminder check shortly after start
         self.after(5000, self.poll_theme)  # follow the Windows theme
+
+    def build_menu(self):
+        menubar = tk.Menu(self)
+        file_menu = tk.Menu(menubar, tearoff=False)
+        file_menu.add_command(label="Export backup...", command=self.export_backup)
+        file_menu.add_command(label="Import backup...", command=self.import_backup)
+        file_menu.add_separator()
+        file_menu.add_command(label="Export calendar (.ics)...", command=self.export_calendar)
+        menubar.add_cascade(label="File", menu=file_menu)
+        self.configure(menu=menubar)
+
+    def export_backup(self):
+        path = filedialog.asksaveasfilename(
+            parent=self,
+            title="Export backup",
+            defaultextension=".json",
+            initialfile=f"study-kit-backup-{date.today().isoformat()}.json",
+            filetypes=[("Backup files", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            counts = backup.export_data(path)
+        except backup.BackupError as error:
+            messagebox.showerror("Export backup", str(error), parent=self)
+            return
+        messagebox.showinfo(
+            "Export backup",
+            f"Saved {counts['deadlines']} deadlines and {counts['exams']} exams.",
+            parent=self,
+        )
+
+    def import_backup(self):
+        path = filedialog.askopenfilename(
+            parent=self,
+            title="Import backup",
+            filetypes=[("Backup files", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        choice = messagebox.askyesnocancel(
+            "Import backup",
+            "Merge the backup with your current data?\n\n"
+            "Yes: add what is new and keep everything you have\n"
+            "No: replace all your data with the backup\n"
+            "Cancel: do nothing",
+            parent=self,
+        )
+        if choice is None:
+            return
+        replace = not choice
+        if replace and not messagebox.askyesno(
+            "Replace all data",
+            "This replaces all your deadlines and exams.\n"
+            "A copy of your current data file is kept next to it.\n\nContinue?",
+            parent=self,
+        ):
+            return
+        try:
+            result = backup.import_data(path, replace=replace)
+        except backup.BackupError as error:
+            messagebox.showerror("Import backup", str(error), parent=self)
+            return
+        self.refresh()
+        self.refresh_exams()
+        messagebox.showinfo(
+            "Import backup",
+            f"Imported {result['deadlines']} deadlines and {result['exams']} exams "
+            f"({result['skipped']} were already there).",
+            parent=self,
+        )
+
+    def export_calendar(self):
+        path = filedialog.asksaveasfilename(
+            parent=self,
+            title="Export calendar",
+            defaultextension=".ics",
+            initialfile="study-kit.ics",
+            filetypes=[("Calendar files", "*.ics"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            count = ics.export_ics(path)
+        except OSError as error:
+            messagebox.showerror(
+                "Export calendar", f"Could not save the file:\n{error}", parent=self
+            )
+            return
+        messagebox.showinfo(
+            "Export calendar",
+            f"Saved {count} events.\nOpen the file, or import it in Google Calendar, Outlook or "
+            "Apple Calendar. Finished deadlines are left out.",
+            parent=self,
+        )
 
     def build_footer(self):
         footer = ttk.Frame(self)
