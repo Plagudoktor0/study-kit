@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from studykit import deadlines, exams, pdf_tools
+from studykit import deadlines, exams, pdf_tools, timeleft
 
 app = typer.Typer(help="study-kit: small tools for student life.")
 exam_app = typer.Typer(help="Add exams and get a day-by-day study plan.")
@@ -42,11 +42,18 @@ def add(
 @app.command("list")
 def list_cmd(
     include_all: bool = typer.Option(False, "--all", "-a", help="Include finished deadlines"),
+    subject: str = typer.Option("", "--subject", "-s", help="Only this subject"),
+    search: str = typer.Option("", "--search", "-q", help="Only titles or subjects with this text"),
 ):
     """Show deadlines, closest first."""
     items = deadlines.list_deadlines(include_done=include_all)
+    filtering = bool(subject.strip() or search.strip())
+    items = deadlines.filter_items(items, search, subject)
     if not items:
-        console.print("No deadlines yet. Add one with: studykit add")
+        if filtering:
+            console.print("No deadlines match this filter.")
+        else:
+            console.print("No deadlines yet. Add one with: studykit add")
         return
 
     table = Table(title="Deadlines")
@@ -152,8 +159,7 @@ def exam_list():
     table.add_column("Topics", justify="right")
     today = date.today()
     for e in items:
-        days = (date.fromisoformat(e["date"]) - today).days
-        left = "passed" if days < 0 else "today" if days == 0 else f"in {days} d"
+        left, _ = timeleft.exam_label(timeleft.days_until(e["date"], today))
         table.add_row(str(e["id"]), e["date"], left, e["subject"], str(len(e["topics"])))
     console.print(table)
 

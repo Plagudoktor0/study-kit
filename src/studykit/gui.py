@@ -4,8 +4,19 @@ from tkinter import messagebox, ttk
 
 from tkcalendar import Calendar
 
-from studykit import autostart, deadlines, exams, notifier, reminders, subjects, theme
+from studykit import (
+    autostart,
+    deadlines,
+    exams,
+    notifier,
+    reminders,
+    subjects,
+    theme,
+    timeleft,
+)
 from studykit.pdf_panel import PdfPanel
+
+ALL_SUBJECTS = "All subjects"
 
 
 class DatePicker(ttk.Frame):
@@ -175,10 +186,9 @@ class ExamDialog(tk.Toplevel):
 
 
 class App(tk.Tk):
-    """Main window with three tabs: Deadlines and Exams."""
+    """Main window with three tabs: Deadlines, Exams and PDF tools."""
 
     def __init__(self):
-
         super().__init__()
         self.title("study-kit")
 
@@ -294,6 +304,26 @@ class App(tk.Tk):
             self.cards.append(card)
             self.card_values[key] = value
 
+        # search box and subject filter
+        filters = ttk.Frame(self.deadlines_tab)
+        filters.pack(fill="x", padx=10, pady=(theme.px(10), 0))
+        ttk.Label(filters, text="Search").pack(side="left")
+        self.search_var = tk.StringVar()
+        ttk.Entry(filters, textvariable=self.search_var, width=24).pack(side="left", padx=(5, 15))
+        ttk.Label(filters, text="Subject").pack(side="left")
+        self.subject_filter = tk.StringVar(value=ALL_SUBJECTS)
+        self.subject_box = ttk.Combobox(
+            filters,
+            textvariable=self.subject_filter,
+            values=[ALL_SUBJECTS],
+            state="readonly",
+            width=18,
+        )
+        self.subject_box.pack(side="left", padx=(5, 15))
+        ttk.Button(filters, text="Clear", command=self.clear_filters).pack(side="left")
+        self.search_var.trace_add("write", lambda *args: self.refresh())
+        self.subject_box.bind("<<ComboboxSelected>>", lambda event: self.refresh())
+
         # deadlines table
         columns = ("id", "due", "left", "subject", "title")
         self.tree = ttk.Treeview(
@@ -400,13 +430,31 @@ class App(tk.Tk):
             deadlines.delete_deadline(deadline_id)
             self.refresh()
 
+    def clear_filters(self):
+        self.search_var.set("")
+        self.subject_filter.set(ALL_SUBJECTS)
+        self.refresh()
+
+    def update_subject_choices(self):
+        """Fill the subject dropdown from the deadlines; reset it if the chosen one is gone."""
+        choices = [ALL_SUBJECTS] + deadlines.used_subjects()
+        self.subject_box.configure(values=choices)
+        if self.subject_filter.get() not in choices:
+            self.subject_filter.set(ALL_SUBJECTS)
+
     def refresh(self):
         for row in self.tree.get_children():
             self.tree.delete(row)
 
+        self.update_subject_choices()
+        query = self.search_var.get()
+        chosen = self.subject_filter.get()
+        subject = "" if chosen == ALL_SUBJECTS else chosen
+        filtering = bool(query.strip() or subject)
+
         if self.show_archive.get():
             self.title("study-kit - archive")
-            for item in deadlines.list_finished():
+            for item in deadlines.filter_items(deadlines.list_finished(), query, subject):
                 self.tree.insert(
                     "",
                     "end",
@@ -416,16 +464,9 @@ class App(tk.Tk):
             empty_text = "The archive is empty.\nFinished deadlines appear here."
         else:
             self.title("study-kit")
-            for item in deadlines.list_deadlines():
-                days = deadlines.days_left(item)
-                if days < 0:
-                    left, tags = f"overdue {-days} d", ("overdue",)
-                elif days == 0:
-                    left, tags = "today", ("soon",)
-                elif days <= 3:
-                    left, tags = f"in {days} d", ("soon",)
-                else:
-                    left, tags = f"in {days} d", ()
+            for item in deadlines.filter_items(deadlines.list_deadlines(), query, subject):
+                left, tag = timeleft.deadline_label(deadlines.days_left(item))
+                tags = (tag,) if tag else ()
                 self.tree.insert(
                     "",
                     "end",
@@ -433,6 +474,9 @@ class App(tk.Tk):
                     tags=tags,
                 )
             empty_text = "No deadlines yet.\nClick Add deadline to create your first one."
+
+        if filtering:
+            empty_text = "No deadlines match this filter.\nClick Clear to see them all."
 
         if self.tree.get_children():
             self.empty_label.place_forget()
@@ -509,15 +553,8 @@ class App(tk.Tk):
             self.exam_tree.delete(row)
         today = date.today()
         for exam in exams.list_exams():
-            days = (date.fromisoformat(exam["date"]) - today).days
-            if days < 0:
-                left, tags = "passed", ("finished",)
-            elif days == 0:
-                left, tags = "today", ("soon",)
-            elif days <= 3:
-                left, tags = f"in {days} d", ("soon",)
-            else:
-                left, tags = f"in {days} d", ()
+            left, tag = timeleft.exam_label(timeleft.days_until(exam["date"], today))
+            tags = (tag,) if tag else ()
             self.exam_tree.insert(
                 "",
                 "end",

@@ -1,6 +1,6 @@
 from datetime import date
 
-from studykit import deadlines, storage
+from studykit import deadlines, storage, timeleft
 
 
 def is_enabled() -> bool:
@@ -18,14 +18,14 @@ def due_soon(today: date | None = None, within_days: int = 1) -> list[dict]:
     today = today or date.today()
     soon = []
     for item in deadlines.list_deadlines():
-        left = (date.fromisoformat(item["due"]) - today).days
+        left = timeleft.days_until(item["due"], today)
         if left <= within_days:
             soon.append(item)
     return soon
 
 
 def describe(item: dict, today: date) -> str:
-    left = (date.fromisoformat(item["due"]) - today).days
+    left = timeleft.days_until(item["due"], today)
     if left < 0:
         return f"overdue {-left} d"
     if left == 0:

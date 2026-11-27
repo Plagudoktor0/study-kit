@@ -1,6 +1,6 @@
 from datetime import date
 
-from studykit import storage
+from studykit import storage, timeleft
 
 
 def add_deadline(title: str, subject: str, due: date) -> dict:
@@ -28,6 +28,34 @@ def list_deadlines(include_done: bool = False) -> list[dict]:
     return sorted(items, key=lambda d: d["due"])
 
 
+def filter_items(items: list[dict], query: str = "", subject: str = "") -> list[dict]:
+    """Keep deadlines whose title or subject contains `query`, and whose subject is `subject`.
+
+    Both checks ignore upper/lower case. An empty `query` or `subject` means 'no filter'.
+    """
+    query = query.strip().lower()
+    subject = subject.strip().lower()
+    result = []
+    for item in items:
+        item_subject = item["subject"].lower()
+        if subject and item_subject != subject:
+            continue
+        if query and query not in item["title"].lower() and query not in item_subject:
+            continue
+        result.append(item)
+    return result
+
+
+def used_subjects() -> list[str]:
+    """Subjects that appear on at least one deadline, A to Z, without case-only duplicates."""
+    names: dict[str, str] = {}
+    for item in storage.load()["deadlines"]:
+        name = item["subject"].strip()
+        if name:
+            names.setdefault(name.lower(), name)
+    return sorted(names.values(), key=str.lower)
+
+
 def mark_done(deadline_id: int) -> dict | None:
     """Mark a deadline as finished. Returns it, or None if the ID doesn't exist."""
     data = storage.load()
@@ -47,7 +75,7 @@ def next_deadline() -> dict | None:
 
 def days_left(item: dict) -> int:
     """Days from today until the due date (negative means overdue)."""
-    return (date.fromisoformat(item["due"]) - date.today()).days
+    return timeleft.days_until(item["due"])
 
 
 def delete_deadline(deadline_id: int) -> bool:
@@ -99,7 +127,7 @@ def summary(today: date | None = None) -> dict:
     overdue = 0
     week = 0
     for item in active:
-        left = (date.fromisoformat(item["due"]) - today).days
+        left = timeleft.days_until(item["due"], today)
         if left < 0:
             overdue += 1
         elif left <= 7:
