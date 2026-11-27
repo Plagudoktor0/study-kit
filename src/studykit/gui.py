@@ -448,9 +448,13 @@ class App(tk.Tk):
         ttk.Button(bar, text="Add deadline", style="Accent.TButton", command=self.open_add).pack(
             side="left"
         )
-        ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
+        ttk.Button(bar, text="Done", style="Success.TButton", command=self.mark_selected_done).pack(
+            side="left", padx=5
+        )
         ttk.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
-        ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left", padx=5)
+        ttk.Button(bar, text="Delete", style="Danger.TButton", command=self.delete_selected).pack(
+            side="left", padx=5
+        )
         ttk.Checkbutton(
             bar, text="Show archive", variable=self.show_archive, command=self.refresh
         ).pack(side="right")
@@ -624,9 +628,9 @@ class App(tk.Tk):
         ttk.Button(bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam).pack(
             side="left"
         )
-        ttk.Button(bar, text="Delete exam", command=self.delete_selected_exam).pack(
-            side="left", padx=5
-        )
+        ttk.Button(
+            bar, text="Delete exam", style="Danger.TButton", command=self.delete_selected_exam
+        ).pack(side="left", padx=5)
 
     def open_add_exam(self):
         ExamDialog(self, on_saved=self.refresh_exams)
