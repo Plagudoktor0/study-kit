@@ -27,6 +27,7 @@ def list_deadlines(include_done: bool = False) -> list[dict]:
         items = [d for d in items if not d["done"]]
     return sorted(items, key=lambda d: d["due"])
 
+
 def mark_done(deadline_id: int) -> dict | None:
     """Mark a deadline as finished. Returns it, or None if the ID doesn't exist."""
     data = storage.load()
@@ -48,6 +49,7 @@ def days_left(item: dict) -> int:
     """Days from today until the due date (negative means overdue)."""
     return (date.fromisoformat(item["due"]) - date.today()).days
 
+
 def delete_deadline(deadline_id: int) -> bool:
     """Remove a deadline completely. Returns False if the ID doesn't exist."""
     data = storage.load()
@@ -56,7 +58,8 @@ def delete_deadline(deadline_id: int) -> bool:
         return False
     data["deadlines"] = remaining
     storage.save(data)
-    return True    
+    return True
+
 
 def list_finished() -> list[dict]:
     """Return finished deadlines, newest due date first."""
@@ -72,7 +75,8 @@ def restore_deadline(deadline_id: int) -> dict | None:
             item["done"] = False
             storage.save(data)
             return item
-    return None    
+    return None
+
 
 def update_deadline(deadline_id: int, title: str, subject: str, due: date) -> dict | None:
     """Change title, subject and due date. Returns None if the ID doesn't exist."""
@@ -85,6 +89,7 @@ def update_deadline(deadline_id: int, title: str, subject: str, due: date) -> di
             storage.save(data)
             return item
     return None
+
 
 def summary(today: date | None = None) -> dict:
     """Counts for the dashboard cards. 'week' means due today up to 7 days ahead."""

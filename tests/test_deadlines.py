@@ -60,6 +60,7 @@ def test_days_left():
     assert deadlines.days_left(in_five_days) == 5
     assert deadlines.days_left(two_days_ago) == -2
 
+
 def test_delete_removes_only_that_deadline():
     deadlines.add_deadline("A", "", date(2026, 12, 1))
     deadlines.add_deadline("B", "", date(2026, 12, 2))
@@ -69,7 +70,8 @@ def test_delete_removes_only_that_deadline():
 
 
 def test_delete_unknown_id_returns_false():
-    assert deadlines.delete_deadline(99) is False   
+    assert deadlines.delete_deadline(99) is False
+
 
 def test_list_finished_only_returns_done_items():
     deadlines.add_deadline("A", "", date(2026, 12, 1))
@@ -89,7 +91,8 @@ def test_restore_moves_item_back_to_active_list():
 
 
 def test_restore_unknown_id_returns_none():
-    assert deadlines.restore_deadline(99) is None  
+    assert deadlines.restore_deadline(99) is None
+
 
 def test_update_changes_fields():
     deadlines.add_deadline("A", "OS", date(2026, 12, 1))
@@ -108,7 +111,8 @@ def test_update_keeps_done_status():
 
 
 def test_update_unknown_id_returns_none():
-    assert deadlines.update_deadline(99, "x", "", date(2026, 12, 1)) is None    
+    assert deadlines.update_deadline(99, "x", "", date(2026, 12, 1)) is None
+
 
 def test_summary_counts():
     today = date(2026, 11, 24)
@@ -122,4 +126,4 @@ def test_summary_counts():
 
 
 def test_summary_when_empty():
-    assert deadlines.summary(date(2026, 11, 24)) == {"overdue": 0, "week": 0, "finished": 0}      
+    assert deadlines.summary(date(2026, 11, 24)) == {"overdue": 0, "week": 0, "finished": 0}

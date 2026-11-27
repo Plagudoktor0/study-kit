@@ -45,6 +45,7 @@ def list_cmd(
         )
     console.print(table)
 
+
 @app.command()
 def done(deadline_id: int = typer.Argument(..., help="ID from 'studykit list'")):
     """Mark a deadline as finished."""
@@ -71,6 +72,7 @@ def next_cmd():
         when = f"in {days} day(s)"
     subject = item["subject"] or "no subject"
     console.print(f"[bold]{item['title']}[/bold] ({subject}), due {item['due']}, {when}")
+
 
 if __name__ == "__main__":
     app()

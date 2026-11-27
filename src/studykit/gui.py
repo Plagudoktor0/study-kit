@@ -94,7 +94,9 @@ class AddDialog(tk.Toplevel):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(side="left", padx=5)
+        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(
+            side="left", padx=5
+        )
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         title_entry.focus()
@@ -113,7 +115,6 @@ class AddDialog(tk.Toplevel):
         subjects.add_subject(subject)
         self.on_saved()
         self.destroy()
-
 
 
 class ExamDialog(tk.Toplevel):
@@ -149,7 +150,9 @@ class ExamDialog(tk.Toplevel):
 
         buttons = ttk.Frame(self)
         buttons.grid(row=4, column=0, columnspan=2, pady=10)
-        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(side="left", padx=5)
+        ttk.Button(buttons, text="Save", style="Accent.TButton", command=self.save).pack(
+            side="left", padx=5
+        )
         ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="left", padx=5)
 
         subject_box.focus()
@@ -311,9 +314,9 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self.deadlines_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(
-            bar, text="Add deadline", style="Accent.TButton", command=self.open_add
-        ).pack(side="left")
+        ttk.Button(bar, text="Add deadline", style="Accent.TButton", command=self.open_add).pack(
+            side="left"
+        )
         ttk.Button(bar, text="Done", command=self.mark_selected_done).pack(side="left", padx=5)
         ttk.Button(bar, text="Restore", command=self.restore_selected).pack(side="left")
         ttk.Button(bar, text="Delete", command=self.delete_selected).pack(side="left", padx=5)
@@ -473,9 +476,9 @@ class App(tk.Tk):
 
         bar = ttk.Frame(self.exams_tab)
         bar.pack(fill="x", padx=10, pady=10)
-        ttk.Button(
-            bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam
-        ).pack(side="left")
+        ttk.Button(bar, text="Add exam", style="Accent.TButton", command=self.open_add_exam).pack(
+            side="left"
+        )
         ttk.Button(bar, text="Delete exam", command=self.delete_selected_exam).pack(
             side="left", padx=5
         )

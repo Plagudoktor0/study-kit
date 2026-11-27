@@ -39,8 +39,9 @@ def test_invalid_mode_is_ignored():
 def test_both_palettes_have_the_same_keys():
     assert theme.LIGHT.keys() == theme.DARK.keys()
 
+
 def test_px_scales_with_the_screen(monkeypatch):
     monkeypatch.setattr(theme, "_scale", 1.5)
     assert theme.px(100) == 150
     monkeypatch.setattr(theme, "_scale", 1.0)
-    assert theme.px(100) == 100    
+    assert theme.px(100) == 100

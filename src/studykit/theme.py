@@ -216,7 +216,7 @@ def apply(root, mode: str) -> str:
         foreground=[("selected", p["fg"])],
     )
 
-        # dashboard cards, headings, empty-state hints
+    # dashboard cards, headings, empty-state hints
     family = default_font.actual("family")
     size = abs(default_font.actual("size"))
     style.configure("Card.TLabel", background=p["field"], foreground=p["fg"])
