@@ -66,7 +66,19 @@ def set_mode(mode: str) -> None:
 
 
 def system_is_dark() -> bool:
-    """True if Windows is set to dark mode for apps."""
+    """True if the operating system is set to dark mode for apps."""
+    if sys.platform == "darwin":
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["defaults", "read", "-g", "AppleInterfaceStyle"],
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            return False
+        return result.stdout.strip() == "Dark"
     if sys.platform != "win32":
         return False
     try:
@@ -113,7 +125,7 @@ def apply(root, mode: str) -> str:
     name = resolve_name(mode, system_is_dark())
     p = PALETTES[name]
     _current = p
-    _scale = root.winfo_fpixels("1i") / 96  # 1.0 at 100% Windows scale, 1.5 at 150%
+    _scale = root.winfo_fpixels("1i") / 96 if sys.platform == "win32" else 1.0
 
     if sys.platform == "win32":
         for font_name in ("TkDefaultFont", "TkTextFont", "TkMenuFont", "TkHeadingFont"):
@@ -219,7 +231,6 @@ def apply(root, mode: str) -> str:
     # dashboard cards, headings, empty-state hints
     family = default_font.actual("family")
     size = abs(default_font.actual("size"))
-    style.configure("Card.TLabel", background=p["field"], foreground=p["fg"])
     style.configure(
         "CardValue.TLabel",
         background=p["field"],

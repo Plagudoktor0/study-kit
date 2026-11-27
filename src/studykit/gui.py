@@ -5,6 +5,7 @@ from tkinter import messagebox, ttk
 from tkcalendar import Calendar
 
 from studykit import autostart, deadlines, exams, notifier, reminders, subjects, theme
+from studykit.pdf_panel import PdfPanel
 
 
 class DatePicker(ttk.Frame):
@@ -174,7 +175,7 @@ class ExamDialog(tk.Toplevel):
 
 
 class App(tk.Tk):
-    """Main window with two tabs: Deadlines and Exams."""
+    """Main window with three tabs: Deadlines and Exams."""
 
     def __init__(self):
 
@@ -196,6 +197,8 @@ class App(tk.Tk):
         self.exams_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.deadlines_tab, text="Deadlines")
         self.notebook.add(self.exams_tab, text="Exams")
+        self.pdf_tab = PdfPanel(self.notebook)
+        self.notebook.add(self.pdf_tab, text="PDF tools")
 
         self.build_deadlines_tab()
         self.build_exams_tab()
